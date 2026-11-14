@@ -1,0 +1,2611 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TACHI FARM v2.22 - Quản Lý Nông Trại</title>
+<style>
+  :root{
+    --green:#1f7a3d; --green-dark:#145c2b; --green-light:#e8f5ec;
+    --bg:#f4f6f4; --card:#ffffff; --text:#1c2b1f; --muted:#6b7a6e;
+    --danger:#c0392b; --warn:#e67e22; --border:#dde5de; --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text);}
+  header{background:var(--green); color:#fff; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:20;}
+  header h1{font-size:19px;}
+  header .badge{font-size:12px; background:rgba(255,255,255,.2); padding:4px 10px; border-radius:99px;}
+  .layout{display:flex; align-items:flex-start; max-width:1360px; margin:0 auto;}
+  nav{display:flex; flex-direction:column; gap:4px; width:230px; flex-shrink:0; padding:14px 10px; background:#fff; border-right:1px solid var(--border); position:sticky; top:53px; height:calc(100vh - 53px); overflow-y:auto; overflow-x:hidden; z-index:19;}
+  nav button{border:1px solid transparent; background:transparent; padding:11px 14px; border-radius:12px; cursor:pointer; font-size:14.5px; text-align:left; width:100%;}
+  nav button:hover{background:var(--green-light);}
+  nav button.active{background:var(--green); color:#fff; border-color:var(--green);}
+  main{flex:1; min-width:0; max-width:1060px; margin:0 auto; padding:18px 16px 60px;}
+  @media(max-width:820px){
+    .layout{flex-direction:column;}
+    nav{flex-direction:row; width:100%; height:auto; padding:10px 12px; overflow-x:auto; overflow-y:hidden; border-right:none; border-bottom:1px solid var(--border);}
+    nav button{width:auto; white-space:nowrap; border:1px solid var(--border); border-radius:99px; padding:8px 14px; background:#fff;}
+    main{width:100%; padding:16px 12px 60px;}
+  }
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:16px;}
+  .stat{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px;}
+  .stat .num{font-size:26px; font-weight:700; color:var(--green-dark);}
+  .stat .label{font-size:13px; color:var(--muted); margin-top:4px;}
+  .stat.warn .num{color:var(--warn);}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:14px;}
+  .card h2{font-size:16px; margin-bottom:10px;}
+  .toolbar{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .toolbar h2{font-size:18px;}
+  .btn{background:var(--green); color:#fff; border:none; padding:9px 16px; border-radius:10px; cursor:pointer; font-size:14px;}
+  .btn:hover{background:var(--green-dark);}
+  .btn.secondary{background:#fff; color:var(--text); border:1px solid var(--border);}
+  .btn.danger{background:#fff; color:var(--danger); border:1px solid #f0c9c4;}
+  .btn.small{padding:5px 10px; font-size:13px; border-radius:8px;}
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  th,td{text-align:left; padding:9px 8px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{color:var(--muted); font-weight:600; font-size:13px;}
+  .table-wrap{overflow-x:auto;}
+  .tag{display:inline-block; padding:2px 9px; border-radius:99px; font-size:12px; background:var(--green-light); color:var(--green-dark);}
+  .tag.warn{background:#fdf1e5; color:var(--warn);}
+  .tag.done{background:#e8f5ec; color:var(--green-dark);}
+  .tag.over{background:#fdecea; color:var(--danger);}
+  .empty{padding:28px; text-align:center; color:var(--muted); background:#fff; border:1px dashed var(--border); border-radius:var(--radius);}
+  .actions{display:flex; gap:6px; white-space:nowrap;}
+  /* Modal */
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:flex-end; justify-content:center; z-index:50;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff; width:100%; max-width:560px; max-height:92vh; overflow-y:auto; border-radius:18px 18px 0 0; padding:20px;}
+  @media(min-width:640px){ .overlay{align-items:center;} .modal{border-radius:18px;} }
+  .modal h3{margin-bottom:14px; font-size:17px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:13px; color:var(--muted); margin-bottom:5px;}
+  .field input,.field select,.field textarea{width:100%; padding:10px; border:1px solid var(--border); border-radius:10px; font-size:15px; font-family:inherit; background:#fff;}
+  .modal .row{display:flex; gap:10px; justify-content:flex-end; margin-top:16px;}
+  .note{font-size:13px; color:var(--muted); line-height:1.55;}
+  .money-in{color:var(--green-dark); font-weight:600;}
+  .money-out{color:var(--danger); font-weight:600;}
+  input[type=file]{display:none;}
+  .money-suggest{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;}
+  .money-chip{border:1px solid var(--border); background:var(--green-light); color:var(--green-dark); padding:5px 12px; border-radius:99px; cursor:pointer; font-size:13px;}
+  .field label.zone-check{display:inline-flex; align-items:center; gap:7px; padding:8px 13px; border:1px solid var(--border); border-radius:99px; cursor:pointer; font-size:14px; background:#fff; margin:0 6px 8px 0; color:var(--text); width:auto;}
+  .zone-check input{width:18px; height:18px; accent-color:var(--green); cursor:pointer; flex:none;}
+  .field label.zone-check:has(input:checked){background:var(--green-light); border-color:var(--green); font-weight:600; color:var(--green-dark);}
+  .cat-chip{border:1px solid var(--border); background:#fff; color:var(--text); padding:6px 14px; border-radius:99px; cursor:pointer; font-size:13.5px;}
+  .cat-chip.active{background:var(--green-dark); color:#fff; border-color:var(--green-dark); font-weight:600;}
+  tr.inv-group td{background:var(--green-light); font-weight:700; color:var(--green-dark); padding-top:12px; padding-bottom:8px;}
+  th.sortable{cursor:pointer;}
+  .th-in{display:inline-flex; align-items:center; gap:5px; white-space:nowrap;}
+  .sort-ind{display:inline-flex; flex-direction:column; line-height:0.75; font-size:8px;}
+  .sort-ind .u, .sort-ind .d{color:#c6c6c6;}
+  .sort-ind.asc .u{color:#111;}
+  .sort-ind.desc .d{color:#111;}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌱 TACHI FARM</h1>
+  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.22 (14/11/2026)</span></span>
+</header>
+<div id="weatherBar" style="display:none;background:#dff0e4;border-bottom:1px solid var(--border);padding:8px 14px;font-size:13.5px;color:var(--green-dark)"></div>
+<div class="layout">
+<nav id="nav"></nav>
+<main id="app"></main>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <form id="modalForm"></form>
+    <div class="row">
+      <button class="btn secondary" id="btnCancel" type="button">Hủy</button>
+      <button class="btn" id="btnSave" type="button">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileImport" accept=".json,application/json">
+
+<script>
+"use strict";
+/* =========================================================
+   LỚP DỮ LIỆU (Data Layer)
+   - Schema này giữ nguyên khi chuyển lên online (Supabase):
+     mỗi bảng = 1 object store, mỗi bản ghi có id (uuid),
+     created_at, updated_at theo ISO string.
+   - Sau này chỉ cần thay FarmDB bằng lớp gọi API,
+     giao diện không phải viết lại.
+   ========================================================= */
+const DB_NAME = "farm_app_db";
+const DB_VERSION = 8;
+const STORES = ["zones", "crops", "plantings", "seasons", "tasks", "inventory", "finances", "care_logs", "periods", "stock_ins", "photos", "special_trees", "harvests", "stock_checks", "workers", "work_logs", "worker_payments"];
+
+const FarmDB = {
+  db: null,
+  open() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        STORES.forEach(s => { if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: "id" }); });
+      };
+      // Nếu còn tab/cửa sổ TACHI FARM bản cũ đang mở, việc nâng cấp database sẽ bị treo chờ:
+      // báo rõ lên góc phải để người dùng biết mà đóng các tab cũ, thay vì đứng ở trang trắng.
+      req.onblocked = () => {
+        const el = document.getElementById("syncStatus");
+        if (el) el.textContent = "⚠ Hãy đóng hết các tab TACHI FARM cũ đang mở, rồi tải lại trang này";
+      };
+      req.onsuccess = () => {
+        FarmDB.db = req.result;
+        // Khi 1 tab khác mở bản mới hơn, tab này tự nhả database để tab mới nâng cấp được
+        FarmDB.db.onversionchange = () => { try { FarmDB.db.close(); } catch {} };
+        resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
+  },
+  _tx(store, mode) { return FarmDB.db.transaction(store, mode).objectStore(store); },
+  all(store) {
+    return new Promise((resolve, reject) => {
+      const out = []; const req = FarmDB._tx(store, "readonly").openCursor();
+      req.onsuccess = () => { const c = req.result; if (c) { out.push(c.value); c.continue(); } else resolve(out); };
+      req.onerror = () => reject(req.error);
+    });
+  },
+  put(store, record) {
+    return new Promise((resolve, reject) => {
+      const now = new Date().toISOString();
+      if (!record.id) { record.id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()); record.created_at = now; }
+      record.updated_at = now;
+      const req = FarmDB._tx(store, "readwrite").put(record);
+      req.onsuccess = () => resolve(record); req.onerror = () => reject(req.error);
+    });
+  },
+  remove(store, id) {
+    return new Promise((resolve, reject) => {
+      const req = FarmDB._tx(store, "readwrite").delete(id);
+      req.onsuccess = () => resolve(); req.onerror = () => reject(req.error);
+    });
+  },
+  clearAll() {
+    return Promise.all(STORES.map(s => new Promise((res, rej) => {
+      const req = FarmDB._tx(s, "readwrite").clear();
+      req.onsuccess = res; req.onerror = () => rej(req.error);
+    })));
+  }
+};
+
+/* ===== Cấu hình các module: định nghĩa 1 chỗ, CRUD dùng chung ===== */
+const MODULES = {
+  zones: {
+    title: "Mảnh đất", icon: "🗺️",
+    fields: [
+      { key: "name", label: "Tên mảnh đất", type: "text", required: true, placeholder: "VD: Vườn A, Vườn sau nhà, Đồi tiêu..." },
+      { key: "location", label: "Vị trí / mô tả đường đi", type: "text", placeholder: "VD: Giáp suối, cạnh đường bê tông..." },
+      { key: "area", label: "Diện tích (số)", type: "number" },
+      { key: "unit", label: "Đơn vị diện tích", type: "select", options: ["m²", "ha", "sào", "mẫu"] },
+      { key: "status", label: "Trạng thái", type: "select", options: ["Đang trồng", "Trống", "Đang cải tạo", "Ngừng"] },
+      { key: "notes", label: "Ghi chú", type: "textarea" }
+    ],
+    columns: [
+      { key: "name", label: "Tên mảnh" },
+      { key: "location", label: "Vị trí" },
+      { key: "area", label: "Diện tích", format: (v, r) => (v ? v + " " + (r.unit || "") : "-") },
+      { key: "status", label: "Trạng thái", tag: true }
+    ]
+  },
+  crops: {
+    title: "Danh mục cây", icon: "🌱",
+    fields: [
+      { key: "name", label: "Tên cây", type: "text", required: true, placeholder: "VD: Hồ tiêu, Cà phê, Sầu riêng..." },
+      { key: "group", label: "Nhóm cây", type: "select", options: ["Cây lâu năm", "Cây ngắn ngày (hoa màu)", "Khác"] },
+      { key: "unit", label: "Đơn vị tính mặc định", type: "select", options: ["cây", "gốc", "bụi", "trụ", "luống", "hàng"] },
+      { key: "notes", label: "Ghi chú", type: "textarea" }
+    ],
+    columns: [
+      { key: "name", label: "Tên cây" },
+      { key: "group", label: "Nhóm" },
+      { key: "unit", label: "Đơn vị" },
+      { key: "notes", label: "Ghi chú" }
+    ]
+  },
+  tasks: {
+    title: "Việc cần làm", icon: "✅",
+    fields: [
+      { key: "title", label: "Việc cần làm", type: "text", required: true, placeholder: "VD: Bón phân đợt 2, Tiêm phòng, Cho ăn..." },
+      { key: "date", label: "Ngày làm", type: "date", required: true },
+      { key: "type", label: "Loại việc", type: "select", options: ["Tưới nước", "Bón phân", "Phun thuốc", "Làm cỏ", "Cắt tỉa", "Thu hoạch", "Dọn dẹp", "Khác"] },
+      { key: "planting_id", label: "Thuộc cây trồng", type: "ref", ref: "plantings" },
+      { key: "status", label: "Trạng thái", type: "select", options: ["Chưa làm", "Đã xong"] },
+      { key: "notes", label: "Ghi chú", type: "textarea" }
+    ],
+    columns: [
+      { key: "title", label: "Việc" },
+      { key: "date", label: "Ngày" },
+      { key: "type", label: "Loại" },
+      { key: "planting_id", label: "Cây trồng", ref: "plantings" },
+      { key: "status", label: "Trạng thái", tag: true }
+    ]
+  },
+  inventory: {
+    title: "Kho vật tư", icon: "📦",
+    fields: [
+      { key: "name", label: "Tên vật tư", type: "text", required: true, placeholder: "VD: Phân NPK, Cám heo, Thuốc trừ sâu..." },
+      { key: "category", label: "Nhóm", type: "select", options: ["Phân bón", "Thức ăn", "Thuốc", "Giống", "Dụng cụ", "Khác"] },
+      { key: "quantity", label: "Số lượng tồn", type: "number", required: true },
+      { key: "unit_price", label: "Đơn giá bình quân (đồng / 1 đơn vị)", type: "number", money: true },
+      { key: "unit", label: "Đơn vị (gõ tự do, đơn vị mới sẽ tự vào danh sách gợi ý)", type: "combo", options: ["kg", "bao", "gói", "lít", "chai", "viên", "cái", "con"], comboStore: "inventory", comboKey: "unit", placeholder: "VD: kg, bao, hoặc đơn vị riêng của bạn" },
+      { key: "pack_qty", label: "Trọng lượng / dung tích mỗi gói, chai, bao (Phân bón, Thuốc nên nhập để app tính tổng kg/lít)", type: "number", placeholder: "VD: gói 1 kg thì nhập 1; chai 500 ml thì nhập 500" },
+      { key: "pack_unit", label: "Đơn vị trọng lượng ở trên", type: "select", options: ["kg", "g", "lít", "ml"] },
+      { key: "min_stock", label: "Mức cảnh báo sắp hết", type: "number" },
+      { key: "ingredients", label: "Thành phần / hoạt chất (ghi từ nhãn)", type: "textarea" },
+      { key: "notes", label: "Ghi chú", type: "textarea" }
+    ],
+    columns: [
+      { key: "name", label: "Vật tư" },
+      { key: "category", label: "Nhóm" },
+      { key: "quantity", label: "Tồn kho", format: (v, r) => v + " " + (r.unit || "") },
+      { key: "unit_price", label: "Đơn giá", format: v => v ? Number(v).toLocaleString("vi-VN") + " đ" : "-" },
+      { key: "stock_value", label: "Giá trị tồn", format: (v, r) => (Number(r.quantity || 0) * Number(r.unit_price || 0)) ? fmtMoney(Number(r.quantity || 0) * Number(r.unit_price || 0)) : "-" },
+      { key: "min_stock", label: "Cảnh báo dưới", format: (v, r) => (v !== "" && v != null && Number(r.quantity) <= Number(v)) ? "⚠️ Sắp hết" : "-" }
+    ]
+  },
+  workers: {
+    title: "Nhân công", icon: "👷",
+    fields: [
+      { key: "name", label: "Họ tên", type: "text", required: true },
+      { key: "phone", label: "Số điện thoại", type: "text" },
+      { key: "kind", label: "Loại nhân công", type: "select", options: ["Thường xuyên", "Thời vụ"] },
+      { key: "day_rate", label: "Giá công mặc định (đ/ngày)", type: "number", money: true },
+      { key: "status", label: "Trạng thái", type: "select", options: ["Đang làm", "Đã nghỉ"] },
+      { key: "notes", label: "Ghi chú (quen việc gì, ở đâu...)", type: "textarea" }
+    ],
+    columns: [ { key: "name", label: "Nhân công" } ]
+  },
+  finances: {
+    title: "Thu chi", icon: "💰",
+    fields: [
+      { key: "date", label: "Ngày", type: "date", required: true },
+      { key: "type", label: "Loại", type: "select", options: ["Thu", "Chi"] },
+      { key: "category", label: "Hạng mục", type: "select", options: ["Bán nông sản", "Bán vật nuôi", "Mua giống", "Phân bón", "Thức ăn", "Thuốc", "Khấu hao", "Kiểm kho", "Nhân công", "Điện nước", "Sửa chữa", "Khác"] },
+      { key: "amount", label: "Số tiền (VND)", type: "number", required: true, money: true },
+      { key: "planting_id", label: "Thuộc cây trồng", type: "ref", ref: "plantings" },
+      { key: "note", label: "Ghi chú", type: "text" }
+    ],
+    columns: [
+      { key: "date", label: "Ngày" },
+      { key: "type", label: "Loại", format: v => v === "Thu" ? '<span class="money-in">Thu</span>' : '<span class="money-out">Chi</span>', html: true },
+      { key: "category", label: "Hạng mục" },
+      { key: "amount", label: "Số tiền", format: v => Number(v || 0).toLocaleString("vi-VN") + " đ" },
+      { key: "planting_id", label: "Cây trồng", ref: "plantings" },
+      { key: "note", label: "Ghi chú" }
+    ]
+  }
+};
+</script>
+
+<script>
+"use strict";
+/* ===== Giao diện & điều hướng ===== */
+const cache = { zones: [], crops: [], plantings: [], seasons: [], tasks: [], inventory: [], finances: [], care_logs: [], periods: [], stock_ins: [], photos: [], special_trees: [], harvests: [], stock_checks: [], workers: [], work_logs: [], worker_payments: [] };
+let currentView = "dashboard";
+const APP_VERSION = "v2.22 (14/11/2026)";
+let editing = null; // {store, id}
+
+const VIEWS = [
+  { id: "dashboard", title: "Tổng quan", icon: "🏠" },
+  { id: "garden", title: "Nhập liệu", icon: "🌳" },
+  { id: "care", title: "Nhật ký chăm sóc", icon: "📓" },
+  { id: "special", title: "Cây đặc biệt", icon: "🩺" },
+
+  { id: "inventory", title: "Kho vật tư", icon: "📦" },
+  { id: "workers", title: "Nhân sự", icon: "👷" },
+  { id: "finances", title: "Thu chi", icon: "💰" },
+  { id: "data", title: "Dữ liệu", icon: "💾" }
+];
+const $app = document.getElementById("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtMoney = n => Number(n || 0).toLocaleString("vi-VN") + " đ";
+function parseVN(v) {
+  if (v === "" || v === null || v === undefined) return "";
+  let t = String(v).trim().replace(/\s/g, "");
+  if (!t) return "";
+  // Phân số kiểu 1/2, 1/3, 1/4 (dùng cho ô số lượng khi chỉ dùng 1 phần gói/chai)
+  const fr = t.match(/^(\d+(?:[.,]\d+)?)\/(\d+(?:[.,]\d+)?)$/);
+  if (fr) { const a = parseVN(fr[1]), b = parseVN(fr[2]); return (a !== "" && b) ? a / b : ""; }
+  const hasDot = t.includes("."), hasComma = t.includes(",");
+  if (hasDot && hasComma) {
+    // Cả 2 dấu: dấu nào đứng sau là dấu thập phân. VD 1.234,56 (VN) hoặc 1,234.56 (US)
+    if (t.lastIndexOf(",") > t.lastIndexOf(".")) t = t.replace(/\./g, "").replace(",", ".");
+    else t = t.replace(/,/g, "");
+  } else if (hasComma) {
+    // Phẩy đứng trước nhóm đúng 3 chữ số = dấu phân cách nghìn: 2,600 -> 2600; 1,234,567 -> 1234567
+    // Ngoài ra phẩy là dấu thập phân kiểu VN: 2,5 -> 2.5; 12,34 -> 12.34
+    if (/^-?\d{1,3}(,\d{3})+$/.test(t)) t = t.replace(/,/g, "");
+    else t = t.replace(",", ".");
+  } else if (hasDot) {
+    // Chấm theo nhóm 3 chữ số = phân cách nghìn: 45.000 -> 45000; còn lại là thập phân: 2.5
+    if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
+  }
+  const n = Number(t);
+  return isNaN(n) ? "" : n;
+}
+function fmtNumInput(v) {
+  if (v === "" || v === null || v === undefined) return "";
+  const n = Number(v);
+  return isNaN(n) ? String(v) : n.toLocaleString("vi-VN");
+}
+// Giá trị thật của ô tiền (data-money): chỉ gồm các chữ số, dấu phân cách chỉ là hiển thị.
+// Đọc theo cách này để không bị nhiễu bởi trạng thái gõ dở giữa chừng (VD đang gõ 129.500 thì ô tạm là "12.9500").
+function moneyVal(el) {
+  if (!el) return "";
+  const d = String(el.value || "").replace(/\D/g, "");
+  return d ? parseInt(d, 10) : "";
+}
+// Khóa tìm kiếm: bỏ dấu tiếng Việt để gõ "chau" vẫn tìm thấy "Chậu"
+function searchKey(s) {
+  return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
+}
+const todayStr = () => new Date().toISOString().slice(0, 10);
+function refName(store, id) { const r = cache[store].find(x => x.id === id); return r ? esc(r.name || r.title || r.crop_name || "") : "-"; }
+
+function renderNav() {
+  document.getElementById("nav").innerHTML = VIEWS.map(v =>
+    `<button class="${currentView === v.id ? "active" : ""}" onclick="go('${v.id}')">${v.icon} ${v.title}</button>`).join("");
+}
+function go(view) { currentView = view; renderNav(); render(); }
+
+async function reload() { for (const s of STORES) cache[s] = await FarmDB.all(s); }
+async function render() { await reload(); if (currentView === "dashboard") renderDashboard(); else if (currentView === "data") renderData(); else if (currentView === "garden") renderGarden(); else if (currentView === "care") renderCare(); else if (currentView === "finances") renderFinances(); else if (currentView === "inventory") renderInventory(); else if (currentView === "workers") renderWorkers(); else if (currentView === "special") renderSpecial(); else if (currentView === "harvests") { currentView = "finances"; renderNav(); renderFinances(); } else if (currentView === "special_detail") renderSpecialDetail(); else if (currentView === "photos") renderPhotos(); else renderList(currentView); }
+
+function renderDashboard() {
+  const now = new Date(); const ym = now.toISOString().slice(0, 7);
+  const thu = cache.finances.filter(f => f.type === "Thu" && (f.date || "").startsWith(ym)).reduce((a, f) => a + Number(f.amount || 0), 0);
+  const chi = cache.finances.filter(f => f.type === "Chi" && (f.date || "").startsWith(ym)).reduce((a, f) => a + Number(f.amount || 0), 0);
+  const pending = cache.care_logs.filter(t => t.status === "Cần làm");
+  const overdue = pending.filter(t => t.date && t.date < todayStr());
+  const todayTasks = pending.filter(t => t.date === todayStr());
+  const lowStock = cache.inventory.filter(i => i.min_stock !== "" && i.min_stock != null && Number(i.quantity) <= Number(i.min_stock));
+  const activePlantings = cache.plantings.filter(x => x.status === "Đang trồng");
+  const totalTrees = activePlantings.reduce((a, x) => a + Number(x.quantity || 0), 0);
+  const taskList = list => list.length ? list.map(t =>
+    `<tr><td>${esc(t.activity)}</td><td>${fmtDate(t.date)}</td><td>${scopeText(t)}</td>
+     <td><button class="btn small" onclick="markCareDone('${t.id}')">Đã làm</button></td></tr>`).join("")
+    : `<tr><td colspan="4" style="color:var(--muted)">Không có việc nào.</td></tr>`;
+  $app.innerHTML = `
+    <div class="grid">
+      <div class="stat"><div class="num">${cache.zones.length}</div><div class="label">Mảnh đất</div></div>
+      <div class="stat"><div class="num">${totalTrees.toLocaleString("vi-VN")}</div><div class="label">Tổng số cây đang trồng (${activePlantings.length} hồ sơ)</div></div>
+      <div class="stat ${overdue.length ? "warn" : ""}"><div class="num">${pending.length}</div><div class="label">Việc chưa làm (${overdue.length} quá hạn)</div></div>
+      <div class="stat ${lowStock.length ? "warn" : ""}"><div class="num">${lowStock.length}</div><div class="label">Vật tư sắp hết</div></div>
+      <div class="stat"><div class="num" style="font-size:20px">${fmtMoney(thu)}</div><div class="label">Thu tháng này</div></div>
+      <div class="stat"><div class="num" style="font-size:20px">${fmtMoney(chi)}</div><div class="label">Chi tháng này</div></div>
+      <div class="stat"><div class="num" style="font-size:20px">${fmtMoney(thu - chi)}</div><div class="label">Chênh lệch tháng này</div></div>
+    </div>
+    <div class="card"><h2>📌 Việc hôm nay (${todayTasks.length})</h2><div class="table-wrap"><table>${taskList(todayTasks)}</table></div></div>
+    <div class="card"><h2>⏰ Việc quá hạn (${overdue.length})</h2><div class="table-wrap"><table>${taskList(overdue)}</table></div></div>
+    ${lowStock.length ? `<div class="card"><h2>⚠️ Vật tư sắp hết</h2><p class="note">${lowStock.map(i => esc(i.name) + " (còn " + esc(i.quantity) + " " + esc(i.unit || "") + ")").join(" · ")}</p></div>` : ""}
+    ${recentHarvestsHTML()}
+    ${specialWatchHTML()}
+    <div class="card"><h2>📓 Chăm sóc gần đây</h2><div class="table-wrap"><table>${recentCareList()}</table></div></div>
+    <p class="note">Mẹo: mọi việc đều ghi ở Nhật ký chăm sóc. Việc sắp làm thì để trạng thái Cần làm, làm xong thì chuyển sang Đã làm. Nhớ xuất backup ở mục Dữ liệu mỗi tuần.</p>`;
+}
+
+function tableBodyHTML(store, rows) {
+  const mod = MODULES[store];
+  return rows.length ? rows.map(r => `<tr>${mod.columns.map(c => {
+      let v = r[c.key];
+      if (c.ref) v = refName(c.ref, v);
+      else if (c.format) v = c.format(v, r);
+      else v = esc(v ?? "-");
+      if (c.tag) v = `<span class="tag">${v}</span>`;
+      return `<td>${v}</td>`;
+    }).join("")}
+    <td><div class="actions">
+      <button class="btn small secondary" onclick="openForm('${store}','${r.id}')">Sửa</button>
+      <button class="btn small danger" onclick="removeItem('${store}','${r.id}')">Xóa</button>
+    </div></td></tr>`).join("")
+    : `<tr><td colspan="${mod.columns.length + 1}" style="text-align:center;color:var(--muted);padding:22px">Chưa có dữ liệu. Bấm "+ Thêm" để bắt đầu.</td></tr>`;
+}
+function tableCardHTML(store, rows) {
+  const mod = MODULES[store];
+  return `<div class="table-wrap"><table><tr>${mod.columns.map(c => `<th>${c.label}</th>`).join("")}<th></th></tr>${tableBodyHTML(store, rows)}</table></div>`;
+}
+function moduleSectionHTML(store) {
+  const mod = MODULES[store];
+  const rows = [...cache[store]];
+  return `<div class="card"><div class="toolbar" style="margin-bottom:8px"><h2>${mod.icon} ${mod.title} (${rows.length})</h2>
+    <button class="btn small" onclick="openForm('${store}')">+ Thêm</button></div>
+    ${tableCardHTML(store, rows)}</div>`;
+}
+function renderList(store) {
+  const mod = MODULES[store];
+  let rows = [...cache[store]];
+  if (store === "finances") rows.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  $app.innerHTML = `
+    <div class="toolbar"><h2>${mod.icon} ${mod.title} (${rows.length})</h2>
+    <button class="btn" onclick="openForm('${store}')">+ Thêm mới</button></div>
+    <div class="card">${tableCardHTML(store, rows)}</div>`;
+}
+function renderGarden() {
+  $app.innerHTML = `
+    <div class="toolbar"><h2>🌳 Nhập liệu vườn cây</h2></div>
+    <p class="note" style="margin-bottom:12px">Một chỗ nhập hết phần nền của vườn: mảnh đất, danh mục các loại cây, và số cây từng loại trong từng mảnh.</p>
+    ${moduleSectionHTML("zones")}
+    ${moduleSectionHTML("crops")}
+    ${plantingsSectionHTML()}`;
+}
+let finExpanded = false;
+function toggleFinList() { finExpanded = !finExpanded; render(); }
+// Nội dung file CSV thu chi (xuất ra xem/lưu ngoài app)
+function financesCSV() {
+  const escCSV = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const rows = [...cache.finances].sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.created_at || "").localeCompare(b.created_at || ""));
+  const lines = [["Ngày", "Loại", "Hạng mục", "Số tiền (đ)", "Cây trồng", "Ghi chú"].map(escCSV).join(",")];
+  rows.forEach(f => {
+    const p = f.planting_id ? cache.plantings.find(x => x.id === f.planting_id) : null;
+    lines.push([fmtDate(f.date), f.type || "", f.category || "", f.amount || 0, p ? p.crop_name + (p.variety ? " (" + p.variety + ")" : "") : "", f.note || f.content || f.notes || ""].map(escCSV).join(","));
+  });
+  return lines.join("\r\n");
+}
+function exportFinancesCSV() {
+  const blob = new Blob(["\ufeff" + financesCSV()], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "thu-chi-" + todayStr() + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function renderFinances() {
+  const mod = MODULES.finances;
+  const rows = [...cache.finances].sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.created_at || "").localeCompare(a.created_at || ""));
+  const thu = rows.filter(f => f.type === "Thu").reduce((a, f) => a + Number(f.amount || 0), 0);
+  const chi = rows.filter(f => f.type === "Chi").reduce((a, f) => a + Number(f.amount || 0), 0);
+  const shown = finExpanded ? rows : rows.slice(0, 5);
+  const finBtns = rows.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    ${rows.length > 5 ? `<button class="btn secondary small" onclick="toggleFinList()">${finExpanded ? "Thu gọn - chỉ hiện 5 khoản mới nhất" : "Xem tất cả " + rows.length + " khoản"}</button>` : ""}
+    <button class="btn secondary small" onclick="exportFinancesCSV()">⬇ Xuất file CSV (${rows.length} dòng)</button></div>
+    <p class="note" style="margin-top:8px">Mặc định chỉ hiện 5 khoản thu chi mới nhất cho gọn, giống phần Lịch sử nhập kho. Tổng thu/chi ở trên vẫn tính trên toàn bộ ${rows.length} khoản.</p>` : "";
+  $app.innerHTML = `
+    <div class="toolbar"><h2>${mod.icon} ${mod.title} (${rows.length})</h2>
+    <button class="btn" onclick="openForm('finances')">+ Thêm mới</button></div>
+    <div class="card"><b>Tổng thu:</b> <span class="money-in">${fmtMoney(thu)}</span> &nbsp;·&nbsp; <b>Tổng chi:</b> <span class="money-out">${fmtMoney(chi)}</span> &nbsp;·&nbsp; <b>Chênh lệch:</b> <b>${fmtMoney(thu - chi)}</b></div>
+    <div class="card" id="finCard">${tableCardHTML("finances", shown)}${finBtns}</div>
+    ${harvestSectionHTML()}
+    ${periodCardHTML()}`;
+}
+
+/* ===== Nhân sự: hồ sơ nhân công, chấm công, ứng/trả lương =====
+   Chấm công ghi nhận tiền công phát sinh (theo ngày hoặc khoán sản lượng).
+   Tiền chỉ vào Thu chi khi chi thật: mỗi lần Ứng lương / Trả lương tạo 1 khoản Chi
+   "Nhân công" (cờ is_worker_payment), nên tổng kết mùa vụ tự tính chi nhân công theo ngày chi tiền. */
+let workerMonth = "";
+let wkListExpanded = false;
+let wkLogExpanded = false;
+let wkPayExpanded = false;
+function workerName(id) { const w = cache.workers.find(x => x.id === id); return w ? w.name : "(đã xóa)"; }
+function workerEarned(id) { return cache.work_logs.filter(l => l.worker_id === id).reduce((a, l) => a + Number(l.amount || 0), 0); }
+function workerPaid(id) { return cache.worker_payments.filter(p => p.worker_id === id).reduce((a, p) => a + Number(p.amount || 0), 0); }
+function workerDebt(id) { return workerEarned(id) - workerPaid(id); }
+// Xuất file CSV (dùng chung mẫu với Lịch sử nhập kho và Thu chi)
+function downloadCSV(filename, content) {
+  const blob = new Blob(["\ufeff" + content], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function workersCSV() {
+  const escCSV = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const ws = [...cache.workers].sort((a, b) => (a.status === "Đã nghỉ") - (b.status === "Đã nghỉ") || a.name.localeCompare(b.name, "vi"));
+  const lines = [["Họ tên", "Số điện thoại", "Loại", "Giá công (đ/ngày)", "Trạng thái", "Tổng tiền công (đ)", "Đã ứng/trả (đ)", "Còn nợ (đ)", "Ghi chú"].map(escCSV).join(",")];
+  ws.forEach(w => lines.push([w.name || "", w.phone || "", w.kind || "", w.day_rate || 0, w.status || "", workerEarned(w.id), workerPaid(w.id), workerDebt(w.id), w.notes || ""].map(escCSV).join(",")));
+  return lines.join("\r\n");
+}
+function exportWorkersCSV() { downloadCSV("nhan-cong-" + todayStr() + ".csv", workersCSV()); }
+function workLogsCSV() {
+  const escCSV = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const rows = cache.work_logs.filter(l => (l.date || "").startsWith(workerMonth))
+    .sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.created_at || "").localeCompare(b.created_at || ""));
+  const lines = [["Ngày", "Nhân công", "Cách tính", "Số công / Sản lượng", "Đơn giá (đ)", "Mảnh đất", "Loại việc", "Tiền công (đ)"].map(escCSV).join(",")];
+  rows.forEach(l => lines.push([fmtDate(l.date), workerName(l.worker_id),
+    l.mode === "piece" ? "Khoán sản lượng" : "Theo ngày",
+    l.mode === "piece" ? fmtNumInput(l.qty) + " " + (l.unit || "kg") : fmtNumInput(l.days) + " ngày",
+    l.mode === "piece" ? (l.piece_rate || 0) : (l.rate || 0),
+    l.zone_id ? refName("zones", l.zone_id) : "", l.activity || "", l.amount || 0].map(escCSV).join(",")));
+  return lines.join("\r\n");
+}
+function exportWorkLogsCSV() { downloadCSV("cham-cong-" + workerMonth + ".csv", workLogsCSV()); }
+function workerPaymentsCSV() {
+  const escCSV = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const rows = [...cache.worker_payments].sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.created_at || "").localeCompare(b.created_at || ""));
+  const lines = [["Ngày", "Nhân công", "Loại", "Số tiền (đ)", "Ghi chú"].map(escCSV).join(",")];
+  rows.forEach(p => lines.push([fmtDate(p.date), workerName(p.worker_id), p.kind || "", p.amount || 0, p.note || ""].map(escCSV).join(",")));
+  return lines.join("\r\n");
+}
+function exportWorkerPaymentsCSV() { downloadCSV("ung-tra-luong-" + todayStr() + ".csv", workerPaymentsCSV()); }
+function renderWorkers() {
+  if (!workerMonth) workerMonth = todayStr().slice(0, 7);
+  const ymLabel = workerMonth.split("-").reverse().join("/");
+  const inMonth = d => (d || "").startsWith(workerMonth);
+  const byDate = (a, b) => (b.date || "").localeCompare(a.date || "") || (b.created_at || "").localeCompare(a.created_at || "");
+  const logs = [...cache.work_logs].sort(byDate);
+  const pays = [...cache.worker_payments].sort(byDate);
+  const mLogs = logs.filter(l => inMonth(l.date)), mPays = pays.filter(p => inMonth(p.date));
+  const earnedM = mLogs.reduce((a, l) => a + Number(l.amount || 0), 0);
+  const paidM = mPays.reduce((a, p) => a + Number(p.amount || 0), 0);
+  const debtAll = cache.workers.reduce((a, w) => a + Math.max(0, workerDebt(w.id)), 0);
+  const ws = [...cache.workers].sort((a, b) => (a.status === "Đã nghỉ") - (b.status === "Đã nghỉ") || a.name.localeCompare(b.name, "vi"));
+  const wShown = wkListExpanded ? ws : ws.slice(0, 5);
+  const wRows = ws.length ? wShown.map(w => {
+    const wl = mLogs.filter(l => l.worker_id === w.id);
+    const cong = wl.filter(l => l.mode !== "piece").reduce((a, l) => a + Number(l.days || 0), 0);
+    const khoan = wl.filter(l => l.mode === "piece").length;
+    const earned = wl.reduce((a, l) => a + Number(l.amount || 0), 0);
+    const paid = workerPaid(w.id), debt = workerEarned(w.id) - paid;
+    return `<tr>
+      <td><b>${esc(w.name)}</b>${w.status === "Đã nghỉ" ? ' <span class="tag">Đã nghỉ</span>' : ""}<br><span class="note">${esc(w.kind || "")}${w.notes ? " - " + esc(w.notes) : ""}</span></td>
+      <td>${esc(w.phone || "-")}</td>
+      <td>${w.day_rate ? fmtMoney(w.day_rate) + "/ngày" : "-"}</td>
+      <td>${cong ? fmtNumInput(cong) + " công" : ""}${khoan ? (cong ? "<br>" : "") + khoan + " lần khoán" : ""}${!cong && !khoan ? "-" : ""}</td>
+      <td>${earned ? fmtMoney(earned) : "-"}</td>
+      <td>${paid ? fmtMoney(paid) : "-"}</td>
+      <td>${debt > 0 ? '<b style="color:var(--danger)">' + fmtMoney(debt) + "</b>" : debt < 0 ? '<span class="note">Trả thừa ' + fmtMoney(-debt) + "</span>" : "✓ Đã đủ"}</td>
+      <td><div class="actions">
+        ${w.status !== "Đã nghỉ" ? `<button class="btn small" onclick="openWorkForm('${w.id}')">Chấm công</button>
+        <button class="btn small secondary" onclick="openPayForm('${w.id}')">Ứng / Trả lương</button>` : ""}
+        <button class="btn small secondary" onclick="openForm('workers','${w.id}')">Sửa</button>
+        <button class="btn small danger" onclick="deleteWorker('${w.id}')">Xóa</button>
+      </div></td></tr>`;
+  }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:22px">Chưa có nhân công nào. Bấm "+ Thêm nhân công" để thêm người đầu tiên.</td></tr>`;
+  const logShown = wkLogExpanded ? mLogs : mLogs.slice(0, 5);
+  const logRows = mLogs.length ? logShown.map(l => `<tr>
+      <td style="white-space:nowrap">${fmtDate(l.date)}</td><td><b>${esc(workerName(l.worker_id))}</b></td>
+      <td>${l.mode === "piece" ? "Khoán: " + fmtNumInput(l.qty) + " " + esc(l.unit || "kg") + " x " + fmtMoney(l.piece_rate || 0) : fmtNumInput(l.days) + " ngày x " + fmtMoney(l.rate || 0)}</td>
+      <td>${l.zone_id ? refName("zones", l.zone_id) : "-"}${l.activity ? "<br>" + esc(l.activity) : ""}</td>
+      <td><b>${fmtMoney(l.amount || 0)}</b></td>
+      <td><div class="actions"><button class="btn small secondary" onclick="openWorkLogForm('${l.id}')">Sửa</button>
+      <button class="btn small danger" onclick="deleteWorkLog('${l.id}')">Xóa</button></div></td></tr>`).join("")
+    : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px">Tháng này chưa chấm công cho ai.</td></tr>`;
+  const payShown = wkPayExpanded ? pays : pays.slice(0, 5);
+  const payRows = pays.length ? payShown.map(p => `<tr>
+      <td style="white-space:nowrap">${fmtDate(p.date)}</td><td><b>${esc(workerName(p.worker_id))}</b></td>
+      <td><span class="tag">${esc(p.kind || "")}</span></td><td><b>${fmtMoney(p.amount || 0)}</b></td><td>${esc(p.note || "")}</td>
+      <td><button class="btn small danger" onclick="deleteWorkerPayment('${p.id}')">Xóa</button></td></tr>`).join("")
+    : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px">Chưa có lần ứng/trả lương nào.</td></tr>`;
+  $app.innerHTML = `
+    <div class="toolbar"><h2>👷 Nhân sự (${cache.workers.length} người)</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="month" value="${workerMonth}" onchange="workerMonth=this.value;render()" title="Chọn tháng để xem tổng hợp" style="padding:9px;border:1px solid var(--border);border-radius:10px">
+      <button class="btn secondary" onclick="openWorkForm()">+ Chấm công</button>
+      <button class="btn" onclick="openForm('workers')">+ Thêm nhân công</button>
+    </div></div>
+    <div class="grid">
+      <div class="stat"><div class="num">${fmtMoney(earnedM)}</div><div class="label">Tiền công phát sinh tháng ${ymLabel}</div></div>
+      <div class="stat"><div class="num">${fmtMoney(paidM)}</div><div class="label">Đã ứng/trả trong tháng ${ymLabel}</div></div>
+      <div class="stat"><div class="num" ${debtAll ? 'style="color:var(--danger)"' : ""}>${fmtMoney(debtAll)}</div><div class="label">Tổng còn nợ lương (toàn bộ thời gian)</div></div>
+    </div>
+    <div class="card"><h2>👥 Danh sách nhân công</h2><div class="table-wrap"><table>
+      <tr><th>Nhân công</th><th>Điện thoại</th><th>Giá công</th><th>Công tháng này</th><th>Tiền công tháng này</th><th>Đã ứng/trả (tổng)</th><th>Còn nợ</th><th></th></tr>${wRows}
+    </table></div>
+    <p class="note">Cột "Còn nợ" tính trên toàn bộ thời gian: tổng tiền công đã phát sinh trừ tổng tiền đã ứng/trả. Tiền công chỉ vào Thu chi khi bạn ghi Ứng lương hoặc Trả lương (khoản Chi hạng mục "Nhân công"), nên tổng kết mùa vụ tính chi nhân công theo ngày chi tiền.</p>
+    ${ws.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    ${ws.length > 5 ? `<button class="btn secondary small" onclick="wkListExpanded=!wkListExpanded;render()">${wkListExpanded ? "Thu gọn - chỉ hiện 5 người đầu" : "Xem tất cả " + ws.length + " nhân công"}</button>` : ""}
+    <button class="btn secondary small" onclick="exportWorkersCSV()">⬇ Xuất file CSV (${ws.length} người)</button></div>` : ""}</div>
+    <div class="card"><h2>🗓️ Chấm công tháng ${ymLabel} (${mLogs.length} lượt)</h2><div class="table-wrap"><table>
+      <tr><th>Ngày</th><th>Nhân công</th><th>Cách tính</th><th>Mảnh / Việc</th><th>Tiền công</th><th></th></tr>${logRows}
+    </table></div>
+    ${mLogs.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    ${mLogs.length > 5 ? `<button class="btn secondary small" onclick="wkLogExpanded=!wkLogExpanded;render()">${wkLogExpanded ? "Thu gọn - chỉ hiện 5 lượt mới nhất" : "Xem tất cả " + mLogs.length + " lượt chấm công"}</button>` : ""}
+    <button class="btn secondary small" onclick="exportWorkLogsCSV()">⬇ Xuất file CSV (${mLogs.length} lượt của tháng ${ymLabel})</button></div>` : ""}</div>
+    <div class="card"><h2>💵 Ứng lương / Trả lương (${pays.length} lần)</h2><div class="table-wrap"><table>
+      <tr><th>Ngày</th><th>Nhân công</th><th>Loại</th><th>Số tiền</th><th>Ghi chú</th><th></th></tr>${payRows}
+    </table></div>
+    ${pays.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    ${pays.length > 5 ? `<button class="btn secondary small" onclick="wkPayExpanded=!wkPayExpanded;render()">${wkPayExpanded ? "Thu gọn - chỉ hiện 5 lần mới nhất" : "Xem tất cả " + pays.length + " lần ứng/trả"}</button>` : ""}
+    <button class="btn secondary small" onclick="exportWorkerPaymentsCSV()">⬇ Xuất file CSV (${pays.length} lần)</button></div>` : ""}</div>`;
+}
+// 1 dòng nhân công trong form chấm công: tick chọn, tính theo ngày hoặc khoán sản lượng
+function wkRowHTML(w, preset) {
+  return `<div class="wk-row" data-id="${w.id}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--green-light)">
+    <label class="zone-check" style="margin:0"><input type="checkbox" class="wk-on" ${preset ? "checked" : ""} onchange="wkRowAmt(this)">${esc(w.name)}</label>
+    <select class="wk-mode" onchange="wkModeToggle(this)" style="width:auto;padding:9px;border:1px solid var(--border);border-radius:10px">
+      <option value="day">Theo ngày</option><option value="piece">Khoán sản lượng</option></select>
+    <span class="wk-day-in" style="display:inline-flex;gap:6px;align-items:center">
+      <select class="wk-days" onchange="wkRowAmt(this)" style="width:auto;padding:9px;border:1px solid var(--border);border-radius:10px"><option value="1">1 ngày</option><option value="0.5">Nửa ngày</option></select>
+      <span>x</span>
+      <input class="wk-rate" type="text" inputmode="decimal" data-money="1" value="${w.day_rate ? fmtNumInput(w.day_rate) : ""}" placeholder="đ/ngày" oninput="wkRowAmt(this)" style="width:110px;padding:9px;border:1px solid var(--border);border-radius:10px">
+    </span>
+    <span class="wk-piece-in" style="display:none;gap:6px;align-items:center">
+      <input class="wk-qty" type="text" inputmode="decimal" placeholder="Số lượng" oninput="wkRowAmt(this)" style="width:90px;padding:9px;border:1px solid var(--border);border-radius:10px">
+      <input class="wk-unit" type="text" value="kg" style="width:56px;padding:9px;border:1px solid var(--border);border-radius:10px">
+      <span>x</span>
+      <input class="wk-prate" type="text" inputmode="decimal" data-money="1" placeholder="đ/đơn vị" oninput="wkRowAmt(this)" style="width:110px;padding:9px;border:1px solid var(--border);border-radius:10px">
+    </span>
+    <b class="wk-amt" style="min-width:110px;text-align:right"></b>
+  </div>`;
+}
+function wkCalc(row) {
+  const mode = row.querySelector(".wk-mode").value;
+  if (mode === "piece") {
+    const qty = parseVN(row.querySelector(".wk-qty").value);
+    const pr = moneyVal(row.querySelector(".wk-prate"));
+    if (qty === "" || !(qty > 0) || !(pr > 0)) return null;
+    return { mode, qty, unit: row.querySelector(".wk-unit").value || "kg", piece_rate: pr, amount: Math.round(qty * pr) };
+  }
+  const days = parseFloat(row.querySelector(".wk-days").value);
+  const rate = moneyVal(row.querySelector(".wk-rate"));
+  if (!(rate > 0)) return null;
+  return { mode, days, rate, amount: Math.round(days * rate) };
+}
+function wkRowAmt(el) {
+  const row = el.closest(".wk-row"); if (!row) return;
+  const c = row.querySelector(".wk-on").checked ? wkCalc(row) : null;
+  row.querySelector(".wk-amt").textContent = c ? fmtMoney(c.amount) : "";
+}
+function wkModeToggle(sel) {
+  const row = sel.closest(".wk-row"); if (!row) return;
+  const piece = sel.value === "piece";
+  row.querySelector(".wk-day-in").style.display = piece ? "none" : "inline-flex";
+  const pi = row.querySelector(".wk-piece-in");
+  pi.style.display = piece ? "inline-flex" : "none";
+  wkRowAmt(sel);
+}
+function openWorkForm(presetId) {
+  const ws = cache.workers.filter(w => w.status !== "Đã nghỉ");
+  if (!ws.length) { alert("Chưa có nhân công nào đang làm. Hãy bấm + Thêm nhân công trước."); return; }
+  editing = { store: "work_form", id: null };
+  document.getElementById("modalTitle").textContent = "🗓️ Chấm công";
+  const zoneOpts = `<option value="">- Chung / không gắn mảnh -</option>` + cache.zones.map(z => `<option value="${z.id}">${esc(z.name)}</option>`).join("");
+  const actList = [...new Set([...CARE_ACTIVITIES, "Thu hoạch", "Hái tiêu", "Hái cà phê", "Hái vải"])].map(a => `<option value="${a}">`).join("");
+  document.getElementById("modalForm").innerHTML = `
+    <div class="field"><label>Ngày làm</label><input name="date" type="date" value="${todayStr()}" required></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:160px"><label>Mảnh đất</label><select name="zone_id">${zoneOpts}</select></div>
+      <div class="field" style="flex:1;min-width:160px"><label>Loại việc</label><input name="activity" list="wkActList" placeholder="VD: Làm cỏ, Hái tiêu..."><datalist id="wkActList">${actList}</datalist></div>
+    </div>
+    <div class="field"><label>Nhân công đi làm hôm đó</label>
+    <p class="note" style="margin-bottom:4px">Tick người có đi làm, chọn cách tính công và nhập số liệu. Đơn giá ngày lấy sẵn từ hồ sơ, sửa riêng cho hôm đó cũng được. Ai không tick thì không ghi.</p>
+    <div id="wkList">${ws.map(w => wkRowHTML(w, w.id === presetId)).join("")}</div></div>`;
+  overlay.classList.add("open");
+}
+async function saveWorkLogs() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const fd = new FormData(form);
+  const date = fd.get("date") || todayStr();
+  const zone_id = fd.get("zone_id") || "";
+  const activity = String(fd.get("activity") || "").trim();
+  const logs = [], bad = [];
+  document.querySelectorAll(".wk-row").forEach(row => {
+    if (!row.querySelector(".wk-on").checked) return;
+    const w = cache.workers.find(x => x.id === row.dataset.id); if (!w) return;
+    const c = wkCalc(row);
+    if (!c) { bad.push(w.name); return; }
+    logs.push({ date, worker_id: w.id, mode: c.mode, days: c.mode === "day" ? c.days : 0, rate: c.mode === "day" ? c.rate : 0, qty: c.mode === "piece" ? c.qty : 0, unit: c.mode === "piece" ? c.unit : "", piece_rate: c.mode === "piece" ? c.piece_rate : 0, amount: c.amount, zone_id, activity, note: "" });
+  });
+  if (bad.length) { alert("Chưa lưu được vì thiếu số liệu của:\n- " + bad.join("\n- ") + "\nHãy nhập đơn giá ngày (tính theo ngày) hoặc số lượng + đơn giá khoán (tính khoán)."); return; }
+  if (!logs.length) { alert("Bạn chưa tick nhân công nào. Hãy tick ít nhất 1 người có đi làm."); return; }
+  for (const l of logs) await FarmDB.put("work_logs", l);
+  closeForm(); render();
+}
+function openWorkLogForm(id) {
+  const l = cache.work_logs.find(x => x.id === id); if (!l) return;
+  editing = { store: "work_log_edit", id };
+  document.getElementById("modalTitle").textContent = "Sửa chấm công - " + workerName(l.worker_id);
+  const zoneOpts = `<option value="">- Chung / không gắn mảnh -</option>` + cache.zones.map(z => `<option value="${z.id}" ${z.id === l.zone_id ? "selected" : ""}>${esc(z.name)}</option>`).join("");
+  document.getElementById("modalForm").innerHTML = `
+    <div class="field"><label>Ngày làm</label><input name="date" type="date" value="${esc(l.date || todayStr())}" required></div>
+    <div class="field"><label>Cách tính công</label><select name="mode" onchange="wkEditMode(this)">
+      <option value="day" ${l.mode !== "piece" ? "selected" : ""}>Theo ngày</option>
+      <option value="piece" ${l.mode === "piece" ? "selected" : ""}>Khoán sản lượng</option></select></div>
+    <div class="wk-day-in" style="${l.mode === "piece" ? "display:none" : ""}">
+      <div class="field"><label>Số công</label><select name="days"><option value="1" ${Number(l.days) === 1 ? "selected" : ""}>1 ngày</option><option value="0.5" ${Number(l.days) === 0.5 ? "selected" : ""}>Nửa ngày</option></select></div>
+      <div class="field"><label>Đơn giá (đ/ngày)</label><input name="rate" type="text" inputmode="decimal" data-money="1" value="${l.rate ? fmtNumInput(l.rate) : ""}"></div>
+    </div>
+    <div class="wk-piece-in" style="${l.mode === "piece" ? "" : "display:none"}">
+      <div class="field"><label>Số lượng sản lượng</label><input name="qty" type="text" inputmode="decimal" value="${l.qty ? fmtNumInput(l.qty) : ""}"></div>
+      <div class="field"><label>Đơn vị</label><input name="unit" type="text" value="${esc(l.unit || "kg")}"></div>
+      <div class="field"><label>Đơn giá khoán (đ/đơn vị)</label><input name="piece_rate" type="text" inputmode="decimal" data-money="1" value="${l.piece_rate ? fmtNumInput(l.piece_rate) : ""}"></div>
+    </div>
+    <div class="field"><label>Mảnh đất</label><select name="zone_id">${zoneOpts}</select></div>
+    <div class="field"><label>Loại việc</label><input name="activity" value="${esc(l.activity || "")}"></div>`;
+  overlay.classList.add("open");
+}
+function wkEditMode(sel) {
+  const form = document.getElementById("modalForm");
+  const piece = sel.value === "piece";
+  form.querySelector(".wk-day-in").style.display = piece ? "none" : "";
+  form.querySelector(".wk-piece-in").style.display = piece ? "" : "none";
+}
+async function saveWorkLogEdit() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const fd = new FormData(form);
+  const old = cache.work_logs.find(x => x.id === editing.id); if (!old) { closeForm(); return; }
+  const data = { ...old };
+  data.date = fd.get("date") || todayStr();
+  data.mode = fd.get("mode") || "day";
+  data.zone_id = fd.get("zone_id") || "";
+  data.activity = String(fd.get("activity") || "").trim();
+  if (data.mode === "piece") {
+    const qty = parseVN(fd.get("qty")); const pr = parseVN(fd.get("piece_rate"));
+    if (qty === "" || !(qty > 0) || pr === "" || !(pr > 0)) { alert("Hãy nhập số lượng và đơn giá khoán hợp lệ."); return; }
+    data.qty = qty; data.unit = fd.get("unit") || "kg"; data.piece_rate = pr; data.amount = Math.round(qty * pr); data.days = 0; data.rate = 0;
+  } else {
+    const rate = parseVN(fd.get("rate"));
+    if (rate === "" || !(rate > 0)) { alert("Hãy nhập đơn giá ngày hợp lệ."); return; }
+    data.days = parseFloat(fd.get("days")) || 1; data.rate = rate; data.amount = Math.round(data.days * rate); data.qty = 0; data.piece_rate = 0;
+  }
+  await FarmDB.put("work_logs", data);
+  closeForm(); render();
+}
+async function deleteWorkLog(id) {
+  const l = cache.work_logs.find(x => x.id === id); if (!l) return;
+  if (!confirm("Xóa lượt chấm công ngày " + fmtDate(l.date) + " của " + workerName(l.worker_id) + " (" + fmtMoney(l.amount) + ")?")) return;
+  await FarmDB.remove("work_logs", id);
+  render();
+}
+function openPayForm(workerId) {
+  if (!cache.workers.length) { alert("Chưa có nhân công nào. Hãy thêm nhân công trước."); return; }
+  editing = { store: "worker_payment", id: null };
+  document.getElementById("modalTitle").textContent = "💵 Ứng lương / Trả lương";
+  const wOpts = cache.workers.map(w => `<option value="${w.id}" ${w.id === workerId ? "selected" : ""}>${esc(w.name)}</option>`).join("");
+  document.getElementById("modalForm").innerHTML = `
+    <div class="field"><label>Nhân công</label><select name="worker_id" onchange="updPayHint(this)">${wOpts}</select></div>
+    <div id="payHint" style="padding:10px 12px;background:var(--green-light);border-radius:8px;font-weight:600;margin-bottom:14px"></div>
+    <div class="field"><label>Loại chi</label><select name="kind"><option>Ứng lương</option><option>Trả lương</option></select></div>
+    <div class="field"><label>Ngày chi</label><input name="date" type="date" value="${todayStr()}" required></div>
+    <div class="field"><label>Số tiền *</label><input name="amount" type="text" inputmode="decimal" data-money="1" value="" placeholder="0" required></div>
+    <button type="button" class="btn small secondary" onclick="fillPayDebt()" style="margin-bottom:14px">Điền số còn nợ vào ô tiền</button>
+    <div class="field"><label>Ghi chú</label><input name="note" type="text" placeholder="VD: Trả công đợt hái tiêu..."></div>
+    <p class="note">Khoản chi này tự ghi vào Thu chi với hạng mục "Nhân công" để tính vào chi phí mùa vụ.</p>`;
+  overlay.classList.add("open");
+  updPayHint(document.querySelector("[name=worker_id]"));
+}
+function updPayHint(sel) {
+  const box = document.getElementById("payHint"); if (!box || !sel) return;
+  const id = sel.value;
+  box.textContent = "Tổng tiền công: " + fmtMoney(workerEarned(id)) + " · Đã ứng/trả: " + fmtMoney(workerPaid(id)) + " · Còn nợ: " + fmtMoney(Math.max(0, workerDebt(id)));
+}
+function fillPayDebt() {
+  const sel = document.querySelector("[name=worker_id]"); const inp = document.querySelector("[name=amount]");
+  if (!sel || !inp) return;
+  const d = Math.max(0, workerDebt(sel.value));
+  inp.value = d ? d.toLocaleString("vi-VN") : "";
+}
+async function saveWorkerPayment() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const fd = new FormData(form);
+  const wid = fd.get("worker_id");
+  const w = cache.workers.find(x => x.id === wid); if (!w) { closeForm(); return; }
+  const amount = parseVN(fd.get("amount"));
+  if (amount === "" || !(amount > 0)) { alert("Hãy nhập số tiền lớn hơn 0."); return; }
+  const kind = fd.get("kind") || "Trả lương";
+  const date = fd.get("date") || todayStr();
+  const note = fd.get("note") || "";
+  const pay = await FarmDB.put("worker_payments", { date, worker_id: wid, kind, amount, note });
+  const fin = await FarmDB.put("finances", { date, type: "Chi", category: "Nhân công", amount, planting_id: "", zone_id: "", note: kind + ": " + w.name + (note ? " - " + note : ""), is_worker_payment: true, payment_id: pay.id });
+  await FarmDB.put("worker_payments", { ...pay, finance_id: fin.id });
+  closeForm(); render();
+}
+async function deleteWorkerPayment(id) {
+  const p = cache.worker_payments.find(x => x.id === id); if (!p) return;
+  if (!confirm("Xóa lần " + (p.kind || "chi") + " " + fmtMoney(p.amount) + " cho " + workerName(p.worker_id) + "? Khoản Chi Nhân công tương ứng ở Thu chi cũng bị xóa, số còn nợ sẽ tăng lại.")) return;
+  if (p.finance_id) await FarmDB.remove("finances", p.finance_id);
+  await FarmDB.remove("worker_payments", id);
+  render();
+}
+async function deleteWorker(id) {
+  const w = cache.workers.find(x => x.id === id); if (!w) return;
+  const nLogs = cache.work_logs.filter(l => l.worker_id === id).length;
+  const nPays = cache.worker_payments.filter(p => p.worker_id === id).length;
+  if (!confirm("Xóa nhân công " + w.name + "?" + (nLogs || nPays ? "\nSẽ xóa kèm " + nLogs + " lượt chấm công, " + nPays + " lần ứng/trả và các khoản Chi Nhân công liên quan ở Thu chi." : ""))) return;
+  for (const p of cache.worker_payments.filter(p => p.worker_id === id)) { if (p.finance_id) await FarmDB.remove("finances", p.finance_id); await FarmDB.remove("worker_payments", p.id); }
+  for (const l of cache.work_logs.filter(l => l.worker_id === id)) await FarmDB.remove("work_logs", l.id);
+  await FarmDB.remove("workers", id);
+  render();
+}
+
+/* ===== Kho vật tư (Phần 3): đơn giá, nhập kho, lịch sử nhập ===== */
+let inventoryQuery = "";
+let inventoryCat = "";
+let stockHistExpanded = false;
+const INV_CAT_ORDER = ["Phân bón", "Thuốc", "Dụng cụ", "Giống", "Thức ăn", "Khác"];
+const INV_CAT_ICONS = { "Phân bón": "🌿", "Thuốc": "💊", "Dụng cụ": "🛠️", "Giống": "🌱", "Thức ăn": "🥣", "Khác": "📦" };
+function invBucket(r) { return (r.category || "").trim() || "Khác"; }
+function invCatIdx(b) { const i = INV_CAT_ORDER.indexOf(b); return i < 0 ? INV_CAT_ORDER.length : i; }
+function setInventoryCat(cat) {
+  inventoryCat = cat || "";
+  document.querySelectorAll(".cat-chip").forEach(b => b.classList.toggle("active", (b.dataset.cat || "") === inventoryCat));
+  applyInventoryFilters();
+}
+function applyInventoryFilters() {
+  const needle = searchKey(inventoryQuery.trim());
+  const trs = document.querySelectorAll("#invTableBody tr[data-search]");
+  let visible = 0; const groupVisible = {};
+  trs.forEach(tr => {
+    const show = (!needle || tr.dataset.search.includes(needle)) && (!inventoryCat || tr.dataset.cat === inventoryCat);
+    tr.style.display = show ? "" : "none";
+    if (show) { visible++; groupVisible[tr.dataset.cat] = true; }
+  });
+  document.querySelectorAll("#invTableBody tr.inv-group").forEach(gr => { gr.style.display = groupVisible[gr.dataset.group] ? "" : "none"; });
+  const nr = document.getElementById("invNoResult");
+  if (nr) nr.style.display = (visible || !trs.length) ? "none" : "";
+  const cnt = document.getElementById("invSearchCount");
+  if (cnt) cnt.textContent = (needle || inventoryCat) ? "Đang hiện " + visible + " / " + trs.length + " vật tư" : "";
+}
+function filterInventoryRows(q) { inventoryQuery = q || ""; applyInventoryFilters(); }
+let inventorySort = { key: "", dir: 1 };
+// Chu kỳ 3 nấc khi bấm 1 cột: tăng dần -> giảm dần -> tắt sắp xếp (về mặc định)
+function setInventorySort(key) {
+  if (inventorySort.key !== key) inventorySort = { key, dir: 1 };
+  else if (inventorySort.dir === 1) inventorySort.dir = -1;
+  else inventorySort = { key: "", dir: 1 };
+  render();
+}
+function sortInd(key) {
+  const st = inventorySort.key === key ? (inventorySort.dir === 1 ? "asc" : "desc") : "";
+  return `<span class="sort-ind ${st}"><span class="u">▲</span><span class="d">▼</span></span>`;
+}
+// Tổng trọng lượng/dung tích tồn kho của 1 vật tư (từ trọng lượng mỗi gói/chai/bao)
+function packTotal(r) {
+  const pq = Number(r.pack_qty || 0), q = Number(r.quantity || 0);
+  if (!(pq > 0)) return null;
+  const u = r.pack_unit || "kg";
+  const total = pq * q;
+  if (u === "g") return { kg: total / 1000, text: total >= 1000 ? fmtNumInput(Math.round(total / 10) / 100) + " kg" : fmtNumInput(total) + " g" };
+  if (u === "ml") return { lit: total / 1000, text: total >= 1000 ? fmtNumInput(Math.round(total / 10) / 100) + " lít" : fmtNumInput(total) + " ml" };
+  if (u === "lít") return { lit: total, text: fmtNumInput(total) + " lít" };
+  return { kg: total, text: fmtNumInput(total) + " kg" };
+}
+// Ảnh đại diện của vật tư trong bảng kho: ảnh đầu tiên đã chụp cho vật tư đó.
+// Bấm vào ảnh (hoặc ô 📷 khi chưa có ảnh) là mở mục ảnh của vật tư để xem/chụp thêm.
+function invThumb(r) {
+  const ph = cache.photos.filter(p => p.link_type === "inventory" && p.link_id === r.id && p.image)
+    .sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.created_at || "").localeCompare(b.created_at || ""))[0];
+  if (ph) return `<img src="${ph.image}" alt="" title="Ảnh của vật tư - bấm để xem và thêm ảnh" onclick="openPhotos('inventory','${r.id}')" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--border);cursor:pointer;flex:none">`;
+  return `<span title="Chưa có ảnh - bấm để chụp/thêm ảnh cho vật tư này" onclick="openPhotos('inventory','${r.id}')" style="width:48px;height:48px;border-radius:10px;border:1px dashed var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;flex:none;background:#fafcfa">📷</span>`;
+}
+function toggleStockHist() { stockHistExpanded = !stockHistExpanded; render(); }
+// Nội dung file CSV lịch sử nhập kho (để xuất ra xem/lưu ngoài app)
+function stockInsCSV() {
+  const escCSV = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const hist = [...cache.stock_ins].sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.created_at || "").localeCompare(b.created_at || ""));
+  const lines = [["Ngày", "Vật tư", "Số lượng", "Đơn vị", "Đơn giá (đ)", "Thành tiền (đ)", "Ghi chú"].map(escCSV).join(",")];
+  hist.forEach(h => {
+    const it = cache.inventory.find(i => i.id === h.item_id);
+    lines.push([fmtDate(h.date), h.item_name || (it ? it.name : ""), h.qty, it ? it.unit || "" : "", h.unit_price || 0, h.total || 0, h.note || ""].map(escCSV).join(","));
+  });
+  return lines.join("\r\n");
+}
+function exportStockInsCSV() {
+  const blob = new Blob(["\ufeff" + stockInsCSV()], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "lich-su-nhap-kho-" + todayStr() + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function renderInventory() {
+  const sk = inventorySort.key, sd = inventorySort.dir;
+  const cmpInv = (a, b) => {
+    let c = 0;
+    if (sk === "quantity") c = Number(a.quantity || 0) - Number(b.quantity || 0);
+    else if (sk === "unit_price") c = Number(a.unit_price || 0) - Number(b.unit_price || 0);
+    else if (sk === "value") c = Number(a.quantity || 0) * Number(a.unit_price || 0) - Number(b.quantity || 0) * Number(b.unit_price || 0);
+    else c = searchKey(a.name).localeCompare(searchKey(b.name));
+    return c * sd || searchKey(a.name).localeCompare(searchKey(b.name));
+  };
+  const rows = [...cache.inventory].sort((a, b) => (invCatIdx(invBucket(a)) - invCatIdx(invBucket(b))) || cmpInv(a, b));
+  const totalVal = rows.reduce((a, i) => a + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
+  const bucketsPresent = [...new Set(rows.map(invBucket))].sort((a, b) => invCatIdx(a) - invCatIdx(b));
+  const bucketStats = {};
+  rows.forEach(r => { const b = invBucket(r); if (!bucketStats[b]) bucketStats[b] = { count: 0, value: 0, kg: 0, lit: 0 }; bucketStats[b].count++; bucketStats[b].value += Number(r.quantity || 0) * Number(r.unit_price || 0); const pt = packTotal(r); if (pt) { if (pt.kg) bucketStats[b].kg += pt.kg; if (pt.lit) bucketStats[b].lit += pt.lit; } });
+  const catChips = `<button type="button" class="cat-chip ${!inventoryCat ? "active" : ""}" data-cat="" onclick="setInventoryCat('')">Tất cả (${rows.length})</button>` +
+    bucketsPresent.map(b => `<button type="button" class="cat-chip ${inventoryCat === b ? "active" : ""}" data-cat="${esc(b)}" onclick="setInventoryCat('${esc(b)}')">${INV_CAT_ICONS[b] || "📦"} ${esc(b)} (${bucketStats[b].count})</button>`).join("");
+  let lastBucket = null;
+  const body = rows.length ? rows.map(r => {
+    const b = invBucket(r);
+    let head = "";
+    if (b !== lastBucket) { lastBucket = b; const st = bucketStats[b]; const wTxt = (st.kg ? " - tổng lượng " + fmtNumInput(Math.round(st.kg * 100) / 100) + " kg" : "") + (st.lit ? (st.kg ? " + " : " - tổng lượng ") + fmtNumInput(Math.round(st.lit * 100) / 100) + " lít" : ""); head = `<tr class="inv-group" data-group="${esc(b)}"><td colspan="7">${INV_CAT_ICONS[b] || "📦"} ${esc(b)} <span class="note">(${st.count} vật tư - giá trị tồn ${fmtMoney(st.value)}${wTxt})</span></td></tr>`; }
+    const pt = packTotal(r);
+    return head + `<tr data-search="${esc(searchKey(r.name + " " + (r.category || "") + " " + (r.ingredients || "")))}" data-cat="${esc(b)}">
+    <td><div style="display:flex;gap:10px;align-items:flex-start">${invThumb(r)}<div><b>${esc(r.name)}</b>${r.retired ? ' <span class="tag">' + (r.retire_reason === "Bị hỏng" ? "Đã hỏng - thanh lý" : "Đã dùng hết") + '</span>' : ""}${r.ingredients ? `<br><span class="note">${esc(r.ingredients)}</span>` : ""}</div></div></td><td>${esc(r.category || "")}</td>
+    <td>${r.quantity} ${esc(r.unit || "")}${pt ? `<br><span class="note">≈ ${pt.text} (mỗi ${esc(r.unit || "đơn vị")} ${fmtNumInput(r.pack_qty)} ${esc(r.pack_unit || "kg")})</span>` : ""}</td>
+    <td>${r.unit_price ? Number(r.unit_price).toLocaleString("vi-VN") + " đ" : "-"}</td>
+    <td>${fmtMoney(Number(r.quantity || 0) * Number(r.unit_price || 0))}</td>
+    <td>${(r.min_stock !== "" && r.min_stock != null && Number(r.quantity) <= Number(r.min_stock)) ? "⚠️ Sắp hết" : "-"}</td>
+    <td><div class="actions">
+      ${r.retired ? "" : `<button class="btn small" onclick="openStockIn('${r.id}')">Nhập kho</button>
+      <button class="btn small secondary" onclick="openDepreForm('${r.id}')">Khấu hao</button>`}
+      <button class="btn small secondary" onclick="openForm('inventory','${r.id}')">Sửa</button>
+      <button class="btn small danger" onclick="removeItem('inventory','${r.id}')">Xóa</button>
+    </div></td></tr>`;
+  }).join("")
+    : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:22px">Kho chưa có vật tư. Bấm "+ Thêm vật tư" để tạo vật tư đầu tiên.</td></tr>`;
+  const hist = [...cache.stock_ins].sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.created_at || "").localeCompare(a.created_at || ""));
+  const histShown = stockHistExpanded ? hist : hist.slice(0, 5);
+  const histRows = hist.length ? histShown.map(h => `<tr><td>${fmtDate(h.date)}</td><td>${esc(h.item_name || "")}</td><td>${h.qty}</td><td>${Number(h.unit_price || 0).toLocaleString("vi-VN")} đ</td><td>${fmtMoney(h.total || 0)}</td><td>${esc(h.note || "")}</td>
+    <td><button class="btn small danger" onclick="deleteStockIn('${h.id}')">Xóa</button></td></tr>`).join("")
+    : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px">Chưa có lần nhập kho nào. Khi mua vật tư về, bấm nút "Nhập kho" ở dòng vật tư đó.</td></tr>`;
+  const histBtns = hist.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    ${hist.length > 5 ? `<button class="btn secondary small" onclick="toggleStockHist()">${stockHistExpanded ? "Thu gọn - chỉ hiện 5 lần nhập mới nhất" : "Xem tất cả " + hist.length + " lần nhập"}</button>` : ""}
+    <button class="btn secondary small" onclick="exportStockInsCSV()">⬇ Xuất file CSV (${hist.length} dòng)</button></div>` : "";
+  const checks = [...(cache.stock_checks || [])].sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.created_at || "").localeCompare(a.created_at || ""));
+  const checkHist = `<div class="card"><h2>🔎 Lịch sử kiểm kho (${checks.length} đợt)</h2>` +
+    (checks.length ? checks.map(chk => {
+      const nDiff = (chk.items || []).filter(x => Number(x.diff || 0) !== 0).length;
+      return `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--green-light)">
+        <div style="flex:1;min-width:200px"><b>${fmtDate(chk.date)}</b> - đã đếm ${(chk.items || []).length} món, lệch ${nDiff} món
+        ${chk.loss_value ? `<br><span class="note">Hao hụt: <b style="color:var(--danger)">${fmtMoney(chk.loss_value)}</b> (đã ghi chi Kiểm kho)</span>` : ""}
+        ${chk.surplus_value ? `<br><span class="note">Thừa: <b>${fmtMoney(chk.surplus_value)}</b></span>` : ""}
+        ${chk.note ? `<br><span class="note">${esc(chk.note)}</span>` : ""}</div>
+        <button class="btn small secondary" onclick="viewStockCheck('${chk.id}')">Xem chi tiết</button>
+        <button class="btn small danger" onclick="deleteStockCheck('${chk.id}')">Xóa</button></div>`;
+    }).join("")
+    : `<p class="note" style="padding:8px 0">Chưa kiểm kho lần nào. Bấm nút "🔎 Kiểm kho" ở đầu trang để đối chiếu số đếm thực tế với sổ sách.</p>`) + `</div>`;
+  $app.innerHTML = `
+    <div class="toolbar"><h2>📦 Kho vật tư (${rows.length})</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn secondary" onclick="openStockCheck()">🔎 Kiểm kho</button>
+    <button class="btn" onclick="openForm('inventory')">+ Thêm vật tư</button></div></div>
+    <div class="card"><b>Tổng giá trị tồn kho:</b> <b>${fmtMoney(totalVal)}</b> <span class="note">(tính theo đơn giá bình quân)</span></div>
+    <div class="card"><div class="field" style="margin:0"><label>🔍 Tìm vật tư</label><input id="invSearch" type="text" placeholder="Gõ tên vật tư, VD: NPK, chau nhua, saromite... (gõ không dấu cũng được)" value="${esc(inventoryQuery)}" oninput="filterInventoryRows(this.value)"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${catChips}</div>
+    <p class="note" id="invSearchCount" style="margin-top:6px"></p></div>
+    <div class="card"><div class="table-wrap"><table>
+      <tr><th class="sortable" title="Bấm để sắp xếp: tăng dần - giảm dần - tắt" onclick="setInventorySort('name')"><span class="th-in">Vật tư ${sortInd("name")}</span></th><th>Nhóm</th><th class="sortable" title="Bấm để sắp xếp: tăng dần - giảm dần - tắt" onclick="setInventorySort('quantity')"><span class="th-in">Tồn kho ${sortInd("quantity")}</span></th><th class="sortable" title="Bấm để sắp xếp: tăng dần - giảm dần - tắt" onclick="setInventorySort('unit_price')"><span class="th-in">Đơn giá ${sortInd("unit_price")}</span></th><th class="sortable" title="Bấm để sắp xếp: tăng dần - giảm dần - tắt" onclick="setInventorySort('value')"><span class="th-in">Giá trị tồn ${sortInd("value")}</span></th><th>Cảnh báo</th><th></th></tr><tbody id="invTableBody">${body}
+      <tr id="invNoResult" style="display:none"><td colspan="7" style="text-align:center;color:var(--muted);padding:18px">Không tìm thấy vật tư nào khớp. Thử gõ ngắn lại hoặc bỏ dấu.</td></tr></tbody>
+    </table></div>
+    <p class="note">Mua vật tư về thì bấm "Nhập kho": app cộng tồn, tự tính lại đơn giá bình quân, và tự ghi 1 khoản chi vào Thu chi. Sửa vật tư dùng để sửa tên, đơn vị, mức cảnh báo hoặc chỉnh tay số tồn/đơn giá khi kiểm kê. Bấm vào tiêu đề cột Vật tư / Tồn kho / Đơn giá / Giá trị tồn để sắp xếp: bấm lần 1 tăng dần, lần 2 giảm dần, lần 3 tắt sắp xếp về mặc định.</p></div>
+    <div class="card"><h2>🧾 Lịch sử nhập kho (${hist.length} lần nhập)</h2><div class="table-wrap"><table>
+      <tr><th>Ngày</th><th>Vật tư</th><th>Số lượng</th><th>Đơn giá</th><th>Thành tiền</th><th>Ghi chú</th><th></th></tr><tbody id="stockHistBody">${histRows}</tbody>
+    </table></div>${histBtns}
+    <p class="note">Mặc định chỉ hiện 5 lần nhập mới nhất cho gọn. Xóa 1 dòng lịch sử nhập sẽ trừ lại tồn kho và xóa khoản chi tương ứng ở Thu chi (đơn giá bình quân giữ nguyên).</p></div>
+    ${checkHist}`;
+  if (inventoryQuery || inventoryCat) applyInventoryFilters();
+}
+function openStockIn(itemId) {
+  const item = cache.inventory.find(i => i.id === itemId); if (!item) return;
+  editing = { store: "stock_ins", id: null, item_id: itemId };
+  document.getElementById("modalTitle").textContent = "Nhập kho - " + item.name + " (đang tồn " + item.quantity + " " + (item.unit || "") + ")";
+  document.getElementById("modalForm").innerHTML = `
+    <div class="field"><label>Ngày mua (mặc định hôm nay, sửa được)</label><input name="date" type="date" value="${todayStr()}" required></div>
+    <div class="field"><label>Số lượng mua về *</label><input name="qty" type="text" inputmode="decimal" required placeholder="VD: 25"></div>
+    <div class="field"><label>Tổng tiền đã trả (đồng)</label><input name="total" type="text" inputmode="decimal" data-money="1" placeholder="VD: 100.000"></div>
+    <div class="field"><label>Đơn giá tự tính (đồng / 1 ${esc(item.unit || "đơn vị")})</label><div id="siPricePreview" style="padding:10px 12px; background:var(--green-light); border-radius:8px; font-weight:600">Nhập số lượng và tổng tiền, app tự chia ra đơn giá</div></div>
+    <div class="field"><label>Ghi chú</label><input name="note" placeholder="VD: Mua ở đại lý A"></div>
+    <p class="note">Đơn giá = tổng tiền / số lượng. App sẽ cộng vào tồn kho, tính lại đơn giá bình quân, và tự ghi khoản chi này vào mục Thu chi.</p>`;
+  overlay.classList.add("open");
+  const form = document.getElementById("modalForm");
+  const updPreview = () => {
+    const q = parseVN(form.querySelector("[name=qty]").value) || 0;
+    const t = moneyVal(form.querySelector("[name=total]")) || 0;
+    const box = document.getElementById("siPricePreview");
+    if (!box) return;
+    box.textContent = q > 0 ? "≈ " + fmtMoney(Math.round(t / q)) + " / 1 " + (item.unit || "đơn vị") : "Nhập số lượng và tổng tiền, app tự chia ra đơn giá";
+  };
+  form.querySelector("[name=qty]").addEventListener("input", updPreview);
+  form.querySelector("[name=total]").addEventListener("input", updPreview);
+}
+async function saveStockIn() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const fd = new FormData(form);
+  const item = cache.inventory.find(i => i.id === editing.item_id);
+  if (!item) { closeForm(); return; }
+  const qty = parseVN(fd.get("qty")) || 0;
+  const total = parseVN(fd.get("total")) || 0;
+  if (!(qty > 0)) { alert("Hãy nhập số lượng mua về lớn hơn 0."); return; }
+  const date = fd.get("date") || todayStr();
+  const price = Math.round((total / qty) * 100) / 100;
+  const oldQty = Number(item.quantity || 0);
+  const oldPrice = Number(item.unit_price || 0);
+  const newQty = oldQty + qty;
+  item.quantity = newQty;
+  item.unit_price = oldQty > 0 ? Math.round((oldQty * oldPrice + total) / newQty) : Math.round(total / qty);
+  await FarmDB.put("inventory", { ...item });
+  const si = await FarmDB.put("stock_ins", { item_id: item.id, item_name: item.name, date, qty, unit_price: price, total, note: fd.get("note") || "" });
+  if (total > 0) {
+    const catMap = { "Phân bón": "Phân bón", "Thuốc": "Thuốc", "Giống": "Mua giống" };
+    await FarmDB.put("finances", { date, type: "Chi", category: catMap[item.category] || "Khác", amount: total, planting_id: "", note: "Nhập kho: " + item.name + " (" + qty + " " + (item.unit || "") + ")", is_stock_purchase: true, stock_in_id: si.id });
+  }
+  closeForm(); render();
+}
+// Khấu hao kết thúc 1 vật tư: mốc trừ chi phí là ngày DÙNG HẾT hoặc ngày HỎNG do Bao nhập,
+// trừ theo số lượng kết thúc (được trừ 1 phần). Giá trị = số lượng x đơn giá bình quân,
+// thành 1 khoản chi "Khấu hao" ở Thu chi đúng ngày đã nhập. Hết tồn thì đóng vật tư (retired).
+function depreStartDate(it) {
+  const ins = cache.stock_ins.filter(s => s.item_id === it.id && s.date).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  return ins.length ? ins[0].date : (it.created_at || "").slice(0, 10);
+}
+function depreMonths(startD, endD) {
+  if (!startD || !endD) return 0;
+  const ms = new Date(endD + "T00:00:00").getTime() - new Date(startD + "T00:00:00").getTime();
+  return Math.max(0, Math.round((ms / (30.44 * 24 * 3600 * 1000)) * 10) / 10);
+}
+function openDepreForm(itemId) {
+  const it = cache.inventory.find(i => i.id === itemId); if (!it || it.retired) return;
+  editing = { store: "depre", id: null, item_id: itemId };
+  const startD = depreStartDate(it);
+  document.getElementById("modalTitle").textContent = "Khấu hao - " + it.name;
+  document.getElementById("modalForm").innerHTML = `
+    <p class="note" style="margin-bottom:10px">Đang tồn <b>${it.quantity} ${esc(it.unit || "")}</b>, đơn giá bình quân <b>${fmtNumInput(it.unit_price || 0)} đ</b>${startD ? `, bắt đầu dùng từ ${fmtDate(startD)}` : ""}. Khi vật tư dùng hết hoặc bị hỏng, ghi khấu hao tại đây: giá trị của số lượng kết thúc sẽ thành 1 khoản chi Khấu hao ở Thu chi đúng ngày bạn nhập.</p>
+    <div class="field"><label>Kết thúc vì</label><select name="reason"><option value="Dùng hết">Dùng hết</option><option value="Bị hỏng">Bị hỏng</option></select></div>
+    <div class="field"><label>Ngày dùng hết / hỏng (mặc định hôm nay, sửa được)</label><input name="date" type="date" value="${todayStr()}" required></div>
+    <div class="field"><label>Số lượng kết thúc *</label><input name="qty" type="text" inputmode="decimal" value="${it.quantity}" required></div>
+    <div class="field"><label>Giá trị khấu hao trừ chi phí</label><div id="deprePreview" style="padding:10px 12px;background:var(--green-light);border-radius:8px;font-weight:600"></div></div>
+    <p class="note">Kết thúc hết số tồn thì vật tư đóng lại, không hiện trong form chăm sóc nữa. Kết thúc 1 phần thì phần còn lại vẫn dùng tiếp bình thường.</p>`;
+  overlay.classList.add("open");
+  const form = document.getElementById("modalForm");
+  const upd = () => {
+    const q = parseVN(form.querySelector("[name=qty]").value) || 0;
+    const d = form.querySelector("[name=date]").value || todayStr();
+    const val = Math.round(q * Number(it.unit_price || 0));
+    const months = depreMonths(startD, d);
+    const box = document.getElementById("deprePreview");
+    if (box) box.textContent = fmtMoney(val) + (months ? " - đã dùng khoảng " + months + " tháng" + (val ? ", bình quân " + fmtMoney(Math.round(val / months)) + "/tháng" : "") : "");
+  };
+  form.querySelector("[name=qty]").addEventListener("input", upd);
+  form.querySelector("[name=date]").addEventListener("input", upd);
+  upd();
+}
+async function saveDepreClose() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const fd = new FormData(form);
+  const it = cache.inventory.find(i => i.id === editing.item_id);
+  if (!it) { closeForm(); return; }
+  const qty = parseVN(fd.get("qty")) || 0;
+  const stock = Number(it.quantity || 0);
+  if (!(qty > 0)) { alert("Hãy nhập số lượng kết thúc lớn hơn 0."); return; }
+  if (qty > stock) { alert("Số lượng kết thúc (" + qty + ") lớn hơn số đang tồn (" + stock + "). Hãy kiểm tra lại."); return; }
+  const reason = fd.get("reason") || "Dùng hết";
+  const date = fd.get("date") || todayStr();
+  const value = Math.round(qty * Number(it.unit_price || 0));
+  const months = depreMonths(depreStartDate(it), date);
+  it.quantity = stock - qty;
+  if (it.quantity <= 0) { it.quantity = 0; it.retired = true; it.retire_reason = reason; it.retired_at = date; }
+  await FarmDB.put("inventory", { ...it });
+  if (value > 0) {
+    await FarmDB.put("finances", { date, type: "Chi", category: "Khấu hao", amount: value, planting_id: "", zone_id: "", note: "Khấu hao " + (reason === "Bị hỏng" ? "hỏng" : "dùng hết") + ": " + it.name + " (" + qty + " " + (it.unit || "") + ")" + (months ? " - dùng khoảng " + months + " tháng" : ""), is_depre_writeoff: true, item_id: it.id });
+  }
+  closeForm(); render();
+}
+/* ===== Kiểm kho: đối chiếu số đếm thực tế với sổ sách =====
+   Đếm theo đơn vị gói/chai/bao như số tồn hiện tại. Ô để trống = chưa đếm, giữ nguyên sổ.
+   Phần HỤT được hiểu là vật tư đã dùng mà chưa kê khai ở nhật ký chăm sóc, nên giá trị hụt
+   thành 1 khoản chi "Kiểm kho" ở Thu chi (tính vào chi phí mùa vụ). Phần THỪA chỉ sửa lại tồn. */
+function stockCheckItems() {
+  return [...cache.inventory].filter(i => !i.retired)
+    .sort((a, b) => (invCatIdx(invBucket(a)) - invCatIdx(invBucket(b))) || searchKey(a.name).localeCompare(searchKey(b.name)));
+}
+function openStockCheck() {
+  const items = stockCheckItems();
+  if (!items.length) { alert("Kho chưa có vật tư nào để kiểm."); return; }
+  editing = { store: "stock_check", id: null };
+  document.getElementById("modalTitle").textContent = "🔎 Kiểm kho";
+  const rowHTML = r => `<div class="sc-row" data-id="${r.id}" data-search="${esc(searchKey(r.name + " " + (r.category || "")))}" style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--green-light)">
+    ${invThumb(r)}
+    <div style="flex:1;min-width:0"><b>${esc(r.name)}</b> <span class="note">(${esc(r.category || "")})</span><br>
+    <span class="note">Sổ sách: <b>${fmtNumInput(r.quantity || 0)} ${esc(r.unit || "")}</b> - đơn giá ${fmtNumInput(r.unit_price || 0)} đ</span>
+    <div class="sc-diff" style="font-size:13px;font-weight:600"></div></div>
+    <input class="sc-count" type="text" inputmode="decimal" placeholder="Số đếm" data-book="${Number(r.quantity || 0)}" data-price="${Number(r.unit_price || 0)}" data-unit="${esc(r.unit || "")}" oninput="updStockCheckRow(this)" style="width:96px;padding:9px;border:1px solid var(--border);border-radius:10px;flex:none">
+  </div>`;
+  document.getElementById("modalForm").innerHTML = `
+    <p class="note" style="margin-bottom:10px">Đếm thực tế tại kho rồi nhập số đếm vào từng dòng. Ô nào <b>để trống</b> là chưa đếm, app giữ nguyên số sổ sách. Phần đếm <b>thiếu</b> hơn sổ sách được tính là vật tư đã dùng mà chưa kê khai: giá trị phần hụt sẽ ghi thành khoản chi <b>Kiểm kho</b> ở Thu chi và tồn kho sửa theo số đếm. Phần đếm <b>thừa</b> chỉ sửa lại tồn.</p>
+    <div class="field"><label>Ngày kiểm kho</label><input name="date" type="date" value="${todayStr()}" required></div>
+    <div class="field"><label>🔍 Tìm nhanh vật tư</label><input id="scSearch" type="text" placeholder="Gõ tên vật tư..." oninput="filterStockCheckRows(this.value)"></div>
+    <div id="scList">${items.map(rowHTML).join("")}</div>
+    <div id="scSummary" style="margin-top:12px;padding:10px 12px;background:var(--green-light);border-radius:8px;font-weight:600">Chưa đếm món nào.</div>
+    <div class="field" style="margin-top:12px"><label>Ghi chú đợt kiểm</label><input name="note" type="text" placeholder="VD: Kiểm kho cuối tháng 11"></div>`;
+  overlay.classList.add("open");
+}
+function scRowCalc(row) {
+  const inp = row.querySelector(".sc-count");
+  const raw = (inp.value || "").trim();
+  if (!raw) return null;
+  const v = parseVN(raw);
+  if (v === "" || v == null || isNaN(v) || v < 0) return { invalid: true };
+  const book = Number(inp.dataset.book || 0), price = Number(inp.dataset.price || 0);
+  return { counted: v, book, diff: v - book, value: Math.round((v - book) * price), unit: inp.dataset.unit || "" };
+}
+function updStockCheckRow(input) {
+  const row = input.closest(".sc-row"); if (!row) return;
+  const box = row.querySelector(".sc-diff");
+  const c = scRowCalc(row);
+  if (!c) box.textContent = "";
+  else if (c.invalid) { box.textContent = "Số không hợp lệ"; box.style.color = "var(--danger)"; }
+  else if (c.diff === 0) { box.textContent = "✓ Khớp sổ sách"; box.style.color = "var(--muted)"; }
+  else if (c.diff < 0) { box.textContent = "Hụt " + fmtNumInput(-c.diff) + " " + c.unit + " ≈ " + fmtMoney(-c.value); box.style.color = "var(--danger)"; }
+  else { box.textContent = "Thừa " + fmtNumInput(c.diff) + " " + c.unit + " ≈ +" + fmtMoney(c.value); box.style.color = "var(--green-dark)"; }
+  updStockCheckSummary();
+}
+function updStockCheckSummary() {
+  const rows = [...document.querySelectorAll(".sc-row")];
+  let counted = 0, loss = 0, surplus = 0, invalid = 0;
+  rows.forEach(r => { const c = scRowCalc(r); if (!c) return; if (c.invalid) { invalid++; return; } counted++; if (c.value < 0) loss += -c.value; else surplus += c.value; });
+  const box = document.getElementById("scSummary");
+  if (!box) return;
+  box.textContent = (counted || invalid)
+    ? "Đã đếm " + counted + " / " + rows.length + " món" + (loss ? " - Tổng hụt: " + fmtMoney(loss) + " (sẽ ghi chi Kiểm kho)" : "") + (surplus ? " - Tổng thừa: +" + fmtMoney(surplus) : "") + (invalid ? " - Có " + invalid + " ô nhập sai" : "")
+    : "Chưa đếm món nào.";
+}
+function filterStockCheckRows(q) {
+  const key = searchKey((q || "").trim());
+  document.querySelectorAll(".sc-row").forEach(r => { r.style.display = !key || r.dataset.search.includes(key) ? "" : "none"; });
+}
+async function saveStockCheck() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const fd = new FormData(form);
+  const date = fd.get("date") || todayStr();
+  const items = [], bad = [];
+  document.querySelectorAll(".sc-row").forEach(row => {
+    const it = cache.inventory.find(i => i.id === row.dataset.id); if (!it) return;
+    const c = scRowCalc(row);
+    if (!c) return;
+    if (c.invalid) { bad.push(it.name); return; }
+    items.push({ item_id: it.id, name: it.name, unit: it.unit || "", book_qty: Number(it.quantity || 0), counted_qty: c.counted, unit_price: Number(it.unit_price || 0), diff: c.counted - Number(it.quantity || 0) });
+  });
+  if (bad.length) { alert("Có ô số đếm chưa hợp lệ:\n- " + bad.join("\n- ") + "\nHãy nhập số đếm đúng (VD: 3, 2,5, 1/2) hoặc để trống nếu chưa đếm."); return; }
+  if (!items.length) { alert("Bạn chưa nhập số đếm cho vật tư nào. Hãy đếm và nhập ít nhất 1 món, hoặc bấm Hủy để thoát."); return; }
+  const lossItems = items.filter(x => x.diff < 0), surplusItems = items.filter(x => x.diff > 0);
+  const lossValue = Math.round(lossItems.reduce((a, x) => a + (-x.diff) * x.unit_price, 0));
+  const surplusValue = Math.round(surplusItems.reduce((a, x) => a + x.diff * x.unit_price, 0));
+  const changed = items.filter(x => x.diff !== 0);
+  if (changed.length) {
+    const msg = "Cập nhật tồn kho theo số đếm cho " + changed.length + " món?\n" +
+      (lossItems.length ? "\nHụt " + lossItems.length + " món, trị giá " + fmtMoney(lossValue) + " - sẽ ghi khoản chi Kiểm kho vào Thu chi ngày " + fmtDate(date) + "." : "") +
+      (surplusItems.length ? "\nThừa " + surplusItems.length + " món, trị giá " + fmtMoney(surplusValue) + " - chỉ sửa lại tồn kho." : "");
+    if (!confirm(msg)) return;
+  }
+  for (const x of items) {
+    if (x.diff === 0) continue;
+    const it = cache.inventory.find(i => i.id === x.item_id); if (!it) continue;
+    it.quantity = x.counted_qty;
+    await FarmDB.put("inventory", { ...it });
+  }
+  const chk = await FarmDB.put("stock_checks", { date, note: fd.get("note") || "", items, loss_value: lossValue, surplus_value: surplusValue });
+  if (lossValue > 0) {
+    const detail = lossItems.map(x => x.name + " hụt " + fmtNumInput(-x.diff) + " " + x.unit).join("; ");
+    const fin = await FarmDB.put("finances", { date, type: "Chi", category: "Kiểm kho", amount: lossValue, planting_id: "", zone_id: "", note: "Hao hụt kiểm kho (đã dùng, chưa kê khai): " + detail, is_stock_check_loss: true, stock_check_id: chk.id });
+    await FarmDB.put("stock_checks", { ...chk, finance_id: fin.id });
+  }
+  closeForm(); render();
+}
+function viewStockCheck(id) {
+  const chk = cache.stock_checks.find(x => x.id === id); if (!chk) return;
+  editing = null;
+  document.getElementById("modalTitle").textContent = "🔎 Kiểm kho ngày " + fmtDate(chk.date);
+  const rows = (chk.items || []).map(x => {
+    const d = Number(x.diff || 0);
+    const dtxt = d === 0 ? '<span class="note">Khớp</span>' : d < 0 ? '<span style="color:var(--danger);font-weight:600">Hụt ' + fmtNumInput(-d) + '</span>' : '<span style="color:var(--green-dark);font-weight:600">Thừa ' + fmtNumInput(d) + '</span>';
+    return `<tr><td>${esc(x.name)}</td><td>${fmtNumInput(x.book_qty)} ${esc(x.unit || "")}</td><td>${fmtNumInput(x.counted_qty)} ${esc(x.unit || "")}</td><td>${dtxt}</td><td>${d ? fmtMoney(Math.round(d * Number(x.unit_price || 0))) : "-"}</td></tr>`;
+  }).join("");
+  document.getElementById("modalForm").innerHTML = `
+    ${chk.note ? `<p class="note" style="margin-bottom:8px">Ghi chú: ${esc(chk.note)}</p>` : ""}
+    <div class="table-wrap"><table><tr><th>Vật tư</th><th>Sổ sách</th><th>Đếm thực tế</th><th>Chênh lệch</th><th>Giá trị lệch</th></tr>${rows}</table></div>
+    <p style="margin-top:10px">Tổng hao hụt: <b>${fmtMoney(chk.loss_value || 0)}</b>${chk.loss_value ? ' (đã ghi chi "Kiểm kho" ở Thu chi)' : ""} - Tổng thừa: <b>${fmtMoney(chk.surplus_value || 0)}</b></p>
+    <p class="note">Màn hình này chỉ để xem lại, bấm Hủy để đóng.</p>`;
+  overlay.classList.add("open");
+}
+async function deleteStockCheck(id) {
+  const chk = cache.stock_checks.find(x => x.id === id); if (!chk) return;
+  if (!confirm("Xóa đợt kiểm kho ngày " + fmtDate(chk.date) + " khỏi lịch sử? Khoản chi Kiểm kho tương ứng ở Thu chi cũng bị xóa. Số tồn kho hiện tại KHÔNG đổi (giữ theo số đếm thực tế).")) return;
+  const fin = cache.finances.find(f => f.is_stock_check_loss && f.stock_check_id === id);
+  if (fin) await FarmDB.remove("finances", fin.id);
+  await FarmDB.remove("stock_checks", id);
+  render();
+}
+async function deleteStockIn(id) {
+  const si = cache.stock_ins.find(x => x.id === id); if (!si) return;
+  if (!confirm("Xóa lần nhập kho này? Tồn kho sẽ trừ lại " + si.qty + ", khoản chi mua vật tư tương ứng ở Thu chi cũng bị xóa. Đơn giá bình quân giữ nguyên.")) return;
+  const item = cache.inventory.find(i => i.id === si.item_id);
+  if (item) { item.quantity = Number(item.quantity || 0) - Number(si.qty || 0); await FarmDB.put("inventory", { ...item }); }
+  for (const f of cache.finances.filter(f => f.stock_in_id === id)) await FarmDB.remove("finances", f.id);
+  await FarmDB.remove("stock_ins", id);
+  render();
+}
+
+function renderData() {
+  $app.innerHTML = `
+    <div class="toolbar"><h2>💾 Dữ liệu & Sao lưu</h2></div>
+    <p class="note" style="margin-bottom:12px">Phiên bản app đang mở: <b>${APP_VERSION}</b>. Nếu giao diện khác với bản Muse vừa gửi, rất có thể bạn đang mở file tải cũ trong máy.</p>
+    <div class="card"><h2>Sao lưu</h2>
+      <p class="note">Dữ liệu đang lưu trong trình duyệt trên máy này (IndexedDB). Hãy xuất backup thường xuyên - file backup cũng chính là định dạng sẽ dùng để chuyển dữ liệu lên hệ thống online sau này.</p><br>
+      <button class="btn" onclick="exportData()">⬇️ Xuất backup (JSON)</button>
+      <button class="btn secondary" onclick="document.getElementById('fileImport').click()">⬆️ Nhập backup (JSON)</button>
+      <br><br>${photoStatsHTML()}
+    </div>
+    ${cloudCardHTML()}
+    ${weatherCardHTML()}
+    <div class="card"><h2>Dữ liệu mẫu</h2>
+      <p class="note">Muốn xem thử giao diện có dữ liệu trông thế nào? Thêm bộ dữ liệu mẫu tổng hợp (trồng trọt + chăn nuôi), không thích thì xóa tay từng mục hoặc nhập backup trống đè lên.</p><br>
+      <button class="btn secondary" onclick="seedDemo()">Thêm dữ liệu mẫu</button>
+    </div>
+    <div class="card"><h2>Nguy hiểm</h2>
+      <p class="note">Xóa toàn bộ dữ liệu trên máy này. Nên xuất backup trước.</p><br>
+      <button class="btn danger" onclick="wipeAll()">Xóa toàn bộ dữ liệu</button>
+    </div>`;
+}
+
+/* ===== Cây trong vườn (hồ sơ trồng theo từng mảnh đất) ===== */
+function plantingTextOf(p) {
+  if (p.planting_text) return p.planting_text;
+  if (p.planting_date) return p.planting_date.split("-").reverse().join("/");
+  return "";
+}
+function parsePlantingText(raw) {
+  const t = String(raw || "").trim().replace(/[-.]/g, "/");
+  if (!t) return { text: "", sort: "", precision: "" };
+  const parts = t.split("/").filter(x => x !== "");
+  const nowY = new Date().getFullYear();
+  const okY = y => y >= 1950 && y <= nowY + 1;
+  const pad = n => String(n).padStart(2, "0");
+  if (parts.length === 3) {
+    const d = Number(parts[0]), m = Number(parts[1]), y = Number(parts[2]);
+    if (!(d >= 1 && d <= 31 && m >= 1 && m <= 12 && okY(y))) return null;
+    return { text: pad(d) + "/" + pad(m) + "/" + y, sort: y + "-" + pad(m) + "-" + pad(d), precision: "day" };
+  }
+  if (parts.length === 2) {
+    const m = Number(parts[0]), y = Number(parts[1]);
+    if (!(m >= 1 && m <= 12 && okY(y))) return null;
+    return { text: pad(m) + "/" + y, sort: y + "-" + pad(m) + "-01", precision: "month" };
+  }
+  if (parts.length === 1) {
+    const y = Number(parts[0]);
+    if (!okY(y)) return null;
+    return { text: String(y), sort: y + "-01-01", precision: "year" };
+  }
+  return null;
+}
+function ageText(p) {
+  const txt = plantingTextOf(p);
+  if (txt) {
+    const sort = p.planting_sort || p.planting_date || "";
+    const y = sort ? new Date(sort).getFullYear() : Number(txt.split("/").pop());
+    const yearNo = new Date().getFullYear() - y + 1;
+    return "Trồng " + txt + " - năm thứ " + yearNo;
+  }
+  if (p.age_year) return "Năm thứ " + p.age_year + " (không rõ ngày trồng)";
+  return "Chưa rõ tuổi";
+}
+function plantingsSectionHTML() {
+  const byZone = {};
+  cache.plantings.forEach(p => { (byZone[p.zone_id || ""] = byZone[p.zone_id || ""] || []).push(p); });
+  const zoneCards = cache.zones.map(z => {
+    const list = byZone[z.id] || [];
+    const total = list.reduce((a, p) => a + Number(p.quantity || 0), 0);
+    const rows = list.length ? list.map(p => `<tr>
+      <td><b>${esc(p.crop_name)}</b>${p.variety ? " (" + esc(p.variety) + ")" : ""}</td>
+      <td>${Number(p.quantity || 0).toLocaleString("vi-VN")} ${esc(p.unit || "cây")}</td>
+      <td>${ageText(p)}</td>
+      <td><span class="tag">${esc(p.status || "")}</span></td>
+      <td><div class="actions">
+        <button class="btn small secondary" onclick="openPhotos('planting','${p.id}')">${photoBtnLabel("planting", p.id, "📷 Ảnh")}</button>
+        <button class="btn small secondary" onclick="openCareHistory('${p.id}')">Lịch sử</button>
+        <button class="btn small secondary" onclick="openPlantingForm('${z.id}','${p.id}')">Sửa</button>
+        <button class="btn small danger" onclick="removeItem('plantings','${p.id}')">Xóa</button>
+      </div></td></tr>`).join("")
+      : `<tr><td colspan="5" style="color:var(--muted)">Chưa có cây nào trong mảnh này.</td></tr>`;
+    return `<div class="card"><h2>🗺️ ${esc(z.name)} - tổng ${total.toLocaleString("vi-VN")} cây/gốc/trụ</h2>
+      <div class="table-wrap"><table><tr><th>Cây</th><th>Số lượng</th><th>Tuổi cây</th><th>Trạng thái</th><th></th></tr>${rows}</table></div>
+      <br><button class="btn small" onclick="openPlantingForm('${z.id}')">+ Thêm cây vào mảnh này</button></div>`;
+  }).join("");
+  const orphans = byZone[""] || [];
+  return `
+    <div class="toolbar"><h2>🌳 Cây trong vườn (${cache.plantings.length} hồ sơ)</h2>
+    <button class="btn" onclick="openPlantingForm('')">+ Thêm cây</button></div>
+    ${cache.zones.length ? zoneCards : `<div class="empty">Bạn chưa tạo mảnh đất nào. Hãy vào mục Mảnh đất tạo mảnh đầu tiên, rồi quay lại đây thêm cây.</div>`}
+    ${orphans.length ? `<div class="card"><h2>Chưa gắn mảnh (${orphans.length})</h2><p class="note">${orphans.map(p => esc(p.crop_name)).join(", ")}</p></div>` : ""}
+    <p class="note">Số cây thay đổi (cây chết, trồng thêm) thì cứ bấm Sửa và sửa thẳng con số, đúng như cách bạn chốt. Mỗi dòng cây có nút 📷 Ảnh để thêm ảnh theo dõi: lúc xuống giống, sinh trưởng, ra hoa, đậu trái... và app tự ghi tuổi cây tại ngày chụp.</p>`;
+}
+function openPlantingForm(zoneId, id) {
+  const rec = id ? cache.plantings.find(x => x.id === id) : { zone_id: zoneId || "", age_mode: "date", status: "Đang trồng", unit: "cây" };
+  editing = { store: "plantings", id: id || null };
+  document.getElementById("modalTitle").textContent = (id ? "Sửa" : "Thêm") + " cây vào mảnh đất";
+  const zoneOpts = cache.zones.map(z => `<option value="${z.id}" ${z.id === rec.zone_id ? "selected" : ""}>${esc(z.name)}</option>`).join("");
+  const cropList = cache.crops.map(c => `<option value="${esc(c.name)}">`).join("");
+  document.getElementById("modalForm").innerHTML = `
+    <div class="field"><label>Mảnh đất *</label><select name="zone_id">${zoneOpts}</select></div>
+    <div class="field"><label>Tên cây * (gõ tự do hoặc chọn từ danh mục)</label>
+      <input name="crop_name" list="cropList" value="${esc(rec.crop_name || "")}" placeholder="VD: Sầu riêng" required>
+      <datalist id="cropList">${cropList}</datalist></div>
+    <div class="field"><label>Giống (nếu có)</label><input name="variety" value="${esc(rec.variety || "")}" placeholder="VD: Ri6, Monthong, Robusta..."></div>
+    <div class="field"><label>Số lượng *</label><input name="quantity" type="text" inputmode="decimal" value="${fmtNumInput(rec.quantity ?? "")}" required></div>
+    <div class="field"><label>Đơn vị</label><select name="unit">${["cây", "gốc", "bụi", "trụ", "luống", "hàng"].map(u => `<option ${u === rec.unit ? "selected" : ""}>${u}</option>`).join("")}</select></div>
+    <div class="field"><label>Ngày trồng (nhập đủ ngày/tháng/năm, hoặc chỉ tháng/năm, hoặc chỉ năm)</label><input name="planting_text" value="${esc(plantingTextOf(rec))}" placeholder="VD: 15/03/2024 hoặc 03/2024 hoặc 2024"></div>
+    <div class="field"><label>Trạng thái</label><select name="status">${["Đang trồng", "Đã thu hoạch xong", "Đã bỏ"].map(x => `<option ${x === rec.status ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+    <div class="field"><label>Ghi chú</label><textarea name="notes" rows="2">${esc(rec.notes || "")}</textarea></div>`;
+  overlay.classList.add("open");
+}
+async function savePlanting() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const fd = new FormData(form);
+  const data = editing.id ? { ...cache.plantings.find(x => x.id === editing.id) } : {};
+  ["zone_id", "crop_name", "variety", "unit", "status", "notes"].forEach(k => data[k] = fd.get(k) || "");
+  const qParsed = parseVN(fd.get("quantity")); data.quantity = qParsed === "" ? "" : qParsed;
+  const parsed = parsePlantingText(fd.get("planting_text"));
+  if (parsed === null) { alert("Ngày trồng chưa đúng định dạng. Hãy nhập kiểu 15/03/2024, hoặc 03/2024, hoặc 2024."); return; }
+  data.planting_text = parsed.text;
+  data.planting_sort = parsed.sort;
+  data.planting_precision = parsed.precision;
+  data.planting_date = parsed.sort;
+  data.age_mode = parsed.text ? "flex" : "";
+  if (parsed.text) data.age_year = "";
+  if (!data.crop_name.trim()) { alert("Hãy nhập tên cây."); return; }
+  if (!data.zone_id) { alert("Hãy tạo mảnh đất trước, rồi chọn mảnh cho cây này."); return; }
+  await FarmDB.put("plantings", data);
+  closeForm(); render();
+}
+
+/* ===== Form thêm / sửa (dùng chung cho mọi module) ===== */
+const overlay = document.getElementById("overlay");
+function fieldInput(f, value) {
+  const v = value ?? "";
+  if (f.type === "number") return `<input name="${f.key}" type="text" inputmode="decimal" ${f.money ? 'data-money="1"' : ""} value="${esc(fmtNumInput(v))}" placeholder="${esc(f.placeholder || "")}" ${f.required ? "required" : ""}>`;
+  if (f.type === "combo") {
+    const extra = f.comboStore ? [...new Set(cache[f.comboStore].map(x => x[f.comboKey || f.key]).filter(Boolean))] : [];
+    const opts = [...new Set([...(f.options || []), ...extra])];
+    const lid = "dl_" + f.key;
+    return `<input name="${f.key}" list="${lid}" value="${esc(v)}" placeholder="${esc(f.placeholder || "Gõ tự do hoặc chọn gợi ý")}"><datalist id="${lid}">${opts.map(o => `<option value="${esc(o)}">`).join("")}</datalist>`;
+  }
+  if (f.type === "select") return `<select name="${f.key}">${f.options.map(o => `<option ${o === v ? "selected" : ""}>${o}</option>`).join("")}</select>`;
+  if (f.type === "ref") {
+    const opts = cache[f.ref];
+    return `<select name="${f.key}"><option value="">- Không chọn -</option>${opts.map(o => `<option value="${o.id}" ${o.id === v ? "selected" : ""}>${esc(o.name || o.title || o.crop_name || "")}</option>`).join("")}</select>`;
+  }
+  if (f.type === "textarea") return `<textarea name="${f.key}" rows="2" placeholder="${esc(f.placeholder || "")}">${esc(v)}</textarea>`;
+  return `<input name="${f.key}" type="${f.type}" value="${esc(v)}" placeholder="${esc(f.placeholder || "")}" ${f.required ? "required" : ""}>`;
+}
+function openForm(store, id) {
+  const mod = MODULES[store];
+  const rec = id ? cache[store].find(x => x.id === id) : {};
+  editing = { store, id: id || null };
+  document.getElementById("modalTitle").textContent = (id ? "Sửa " : "Thêm ") + mod.title.toLowerCase();
+  document.getElementById("modalForm").innerHTML = mod.fields.map(f => {
+    let val = rec ? rec[f.key] : "";
+    if (!id && f.type === "date" && !val) val = todayStr();
+    return `<div class="field"><label>${f.label}${f.required ? " *" : ""}</label>${fieldInput(f, val)}</div>`;
+  }).join("");
+  overlay.classList.add("open");
+}
+function closeForm() { overlay.classList.remove("open"); editing = null; }
+document.getElementById("btnCancel").onclick = closeForm;
+overlay.addEventListener("click", e => { if (e.target === overlay) closeForm(); });
+document.getElementById("btnSave").onclick = async () => {
+  if (!editing) return;
+  if (editing.store === "plantings") { await savePlanting(); return; }
+  if (editing.store === "care_logs") { await saveCare(); return; }
+  if (editing.store === "stock_ins") { await saveStockIn(); return; }
+  if (editing.store === "special_trees") { await saveSpecial(); return; }
+  if (editing.store === "harvests") { await saveHarvest(); return; }
+  if (editing.store === "depre") { await saveDepreClose(); return; }
+  if (editing.store === "stock_check") { await saveStockCheck(); return; }
+  if (editing.store === "work_form") { await saveWorkLogs(); return; }
+  if (editing.store === "work_log_edit") { await saveWorkLogEdit(); return; }
+  if (editing.store === "worker_payment") { await saveWorkerPayment(); return; }
+  const mod = MODULES[editing.store];
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const data = editing.id ? { ...cache[editing.store].find(x => x.id === editing.id) } : {};
+  let invalidNum = "";
+  new FormData(form).forEach((v, k) => {
+    const f = mod.fields.find(x => x.key === k);
+    if (f && f.type === "number") {
+      const parsed = parseVN(v);
+      if (String(v).trim() !== "" && parsed === "") invalidNum = f.label;
+      data[k] = parsed;
+    } else data[k] = v;
+  });
+  if (invalidNum) { alert("Ô \"" + invalidNum + "\" chưa đúng định dạng số. Hãy nhập kiểu 45000 hoặc 45.000 (nghĩa là bốn mươi lăm nghìn)."); return; }
+  await FarmDB.put(editing.store, data);
+  closeForm(); render();
+};
+async function removeItem(store, id) {
+  if (!confirm("Xóa mục này? Thao tác không hoàn tác được, hãy chắc chắn đã có backup.")) return;
+  if (store === "care_logs") {
+    const rec = cache.care_logs.find(x => x.id === id);
+    if (rec && rec.status !== "Cần làm") for (const m of (rec.materials || [])) await adjustStock(m.item_id, Number(m.qty || 0));
+  }
+  if (store === "finances") {
+    const rec = cache.finances.find(x => x.id === id);
+    if (rec && rec.harvest_id) await FarmDB.remove("harvests", rec.harvest_id);
+  }
+  if (store === "harvests") {
+    const rec = cache.harvests.find(x => x.id === id);
+    if (rec && rec.finance_id) await FarmDB.remove("finances", rec.finance_id);
+  }
+  if (store === "special_trees") {
+    for (const ph of cache.photos.filter(p => p.link_type === "special_tree" && p.link_id === id)) await FarmDB.remove("photos", ph.id);
+  }
+  await FarmDB.remove(store, id); render();
+}
+
+/* ===== Backup: xuất / nhập JSON ===== */
+async function exportData() {
+  await reload();
+  const payload = { app: "farm-management", version: 1, exported_at: new Date().toISOString(), data: cache };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "tachi-farm-backup-" + todayStr() + ".json";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+document.getElementById("fileImport").addEventListener("change", async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    if (!payload.data) throw new Error("bad file");
+    if (!confirm("Nhập backup sẽ THAY THẾ toàn bộ dữ liệu hiện tại. Tiếp tục?")) return;
+    await FarmDB.clearAll();
+    for (const s of STORES) for (const rec of (payload.data[s] || [])) await FarmDB.put(s, rec);
+    if (Cloud.ready()) { for (const s of STORES) for (const rec of (payload.data[s] || [])) enqueue("put", s, rec.id); syncNow(false); alert("Đã nhập backup. Dữ liệu đang được đẩy lên online, theo dõi trạng thái đồng bộ ở góc trên."); } else alert("Đã nhập backup xong.");
+    go("dashboard");
+  } catch { alert("File không đúng định dạng backup của app."); }
+  e.target.value = "";
+});
+async function wipeAll() { if (!confirm("Xóa TOÀN BỘ dữ liệu? Không hoàn tác được.")) return; await FarmDB.clearAll(); go("dashboard"); }
+
+/* ===== Dữ liệu mẫu (tùy chọn, chỉ thêm khi người dùng bấm) ===== */
+async function seedDemo() {
+  const z1 = await FarmDB.put("zones", { name: "Vườn A", location: "", area: 1.2, unit: "ha", status: "Đang trồng", notes: "" });
+  const p1 = await FarmDB.put("plantings", { zone_id: z1.id, crop_name: "Sầu riêng", variety: "Ri6", quantity: 50, unit: "cây", age_mode: "flex", planting_text: todayStr().split("-").reverse().join("/"), planting_sort: todayStr(), planting_precision: "day", planting_date: todayStr(), age_year: "", status: "Đang trồng", notes: "" });
+  const p2 = await FarmDB.put("plantings", { zone_id: z1.id, crop_name: "Vải thiều", variety: "", quantity: 150, unit: "cây", age_mode: "flex", planting_text: "03/2024", planting_sort: "2024-03-01", planting_precision: "month", planting_date: "2024-03-01", age_year: "", status: "Đang trồng", notes: "Vườn có sẵn, chỉ nhớ tháng/năm trồng" });
+  await FarmDB.put("plantings", { zone_id: z1.id, crop_name: "Cà phê", variety: "", quantity: 200, unit: "cây", age_mode: "flex", planting_text: "2025", planting_sort: "2025-01-01", planting_precision: "year", planting_date: "2025-01-01", age_year: "", status: "Đang trồng", notes: "Chỉ nhớ năm trồng" });
+  await FarmDB.put("care_logs", { date: todayStr(), zone_id: z1.id, planting_id: p1.id, activity: "Kiểm tra tổng thể mảnh đất", materials: [], cost_amount: 0, notes: "", status: "Cần làm" });
+  await FarmDB.put("inventory", { name: "Vật tư mẫu", category: "Khác", quantity: 10, unit: "bao", unit_price: 50000, min_stock: 3, notes: "Sửa tên này thành vật tư thật của bạn" });
+  await FarmDB.put("finances", { date: todayStr(), type: "Chi", category: "Khác", amount: 100000, planting_id: p1.id, note: "Khoản mẫu - hãy xóa và nhập số thật" });
+  await FarmDB.put("care_logs", { date: todayStr(), zone_id: z1.id, planting_id: p1.id, activity: "Bón phân", materials: [], cost_amount: 0, notes: "Dòng mẫu - hãy xóa và ghi việc thật", status: "Đã làm" });
+  await FarmDB.put("care_logs", { date: todayStr(), zone_id: z1.id, planting_id: "", activity: "Tưới nước", materials: [], cost_amount: 0, notes: "Chăm sóc chung cả mảnh (mẫu)", status: "Đã làm" });
+  const st = await FarmDB.put("special_trees", { zone_id: z1.id, planting_id: p1.id, crop_name: "Sầu riêng", row_no: "8", col_no: "2", position_note: "Gần mương nước", issue: "Nứt thân, xì mủ (mẫu)", status: "Đang điều trị", start_date: todayStr(), notes: "Hồ sơ mẫu - hãy xóa và tạo cây thật của bạn" });
+  await FarmDB.put("photos", { link_type: "special_tree", link_id: st.id, date: todayStr(), tag: "Phát hiện bệnh", note: "Lần phát hiện đầu tiên (mẫu, chưa có ảnh)", image: "" });
+  const hv = await FarmDB.put("harvests", { date: todayStr(), planting_id: p2.id, crop_name: "Vải thiều", zone_id: z1.id, qty: 320, unit: "kg", price: 28000, total: 8960000, buyer: "Chị Tư (mẫu)", notes: "Đợt thu mẫu" });
+  const hfin = await FarmDB.put("finances", { date: todayStr(), type: "Thu", category: "Bán nông sản", content: "Bán Vải thiều (320 kg)", amount: 8960000, zone_id: z1.id, planting_id: p2.id, notes: "Người mua: Chị Tư (mẫu)", is_harvest_sale: true, harvest_id: hv.id });
+  await FarmDB.put("harvests", { ...hv, finance_id: hfin.id });
+  alert("Đã thêm dữ liệu mẫu. Bạn sửa/xóa thoải mái để làm quen."); go("dashboard");
+}
+
+/* ===== Nhật ký chăm sóc (Phần 2) ===== */
+let careFilter = { zone_id: "", planting_id: "", activity: "" };
+const CARE_ACTIVITIES = ["Phun thuốc trừ sâu", "Phun thuốc bệnh", "Bón phân", "Tưới nước", "Làm cỏ", "Cắt tỉa", "Bón vôi", "Tủ gốc / che phủ", "Kiểm tra vườn", "Khác"];
+const fmtDate = iso => iso ? iso.split("-").reverse().join("/") : "";
+function matPrice(m) {
+  if (m.depre) return 0;
+  if (m.unit_price) return Number(m.unit_price);
+  const it = cache.inventory.find(i => i.id === m.item_id);
+  return it ? Number(it.unit_price || 0) : 0;
+}
+// Danh sách mảnh của 1 bản ghi chăm sóc: bản ghi mới có zone_ids (nhiều mảnh),
+// bản ghi cũ chỉ có zone_id (1 mảnh) vẫn đọc được.
+function careZoneIds(l) {
+  if (Array.isArray(l.zone_ids) && l.zone_ids.length) return l.zone_ids;
+  return l.zone_id ? [l.zone_id] : [];
+}
+function scopeText(l) {
+  if (l.planting_id) {
+    const p = cache.plantings.find(x => x.id === l.planting_id);
+    if (p) return esc(p.crop_name) + (p.variety ? " (" + esc(p.variety) + ")" : "") + " - " + refName("zones", p.zone_id);
+  }
+  const zs = careZoneIds(l);
+  const names = zs.map(z => refName("zones", z)).join(", ");
+  if (l.crop_scope) return esc(l.crop_scope) + (zs.length > 1 ? " - Cả " + zs.length + " mảnh: " + names : " - " + names);
+  if (zs.length > 1) return "Cả " + zs.length + " mảnh: " + names;
+  return "Cả mảnh - " + (zs[0] ? refName("zones", zs[0]) : "");
+}
+// Bản ghi chăm sóc có thuộc về 1 hồ sơ trồng cụ thể không: trực tiếp qua planting_id,
+// hoặc gián tiếp qua loại cây áp dụng chung (crop_scope) ở nhiều mảnh có chứa mảnh của hồ sơ đó.
+function careMatchesPlanting(l, plantingId) {
+  if (l.planting_id) return l.planting_id === plantingId;
+  if (!l.crop_scope) return false;
+  const p = cache.plantings.find(x => x.id === plantingId);
+  return !!p && l.crop_scope === p.crop_name && careZoneIds(l).includes(p.zone_id);
+}
+function recentCareList() {
+  const list = [...cache.care_logs].filter(l => l.status !== "Cần làm").sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 5);
+  return list.length ? list.map(l => `<tr><td>${fmtDate(l.date)}</td><td>${esc(l.activity)}</td><td>${scopeText(l)}</td></tr>`).join("")
+    : `<tr><td style="color:var(--muted)">Chưa có ghi chép chăm sóc nào.</td></tr>`;
+}
+function openCareHistory(plantingId) { careFilter = { zone_id: "", planting_id: plantingId, activity: "" }; go("care"); }
+function setCareFilter(key, val) { careFilter[key] = val; if (key === "zone_id") careFilter.planting_id = ""; render(); }
+
+function careRowHTML(l, planned) {
+  return `<tr>
+    <td style="white-space:nowrap">${fmtDate(l.date)}${planned && l.date && l.date < todayStr() ? ' <span class="tag over">Quá hạn</span>' : ""}</td>
+    <td><span class="tag">${esc(l.activity)}</span></td>
+    <td>${scopeText(l)}</td>
+    <td>${(l.materials || []).length ? l.materials.map(m => { if (m.depre) return esc(m.name) + ': <span class="tag">Khấu hao</span>'; const pr = matPrice(m); return esc(m.name) + ": " + fmtNumInput(m.qty) + " " + esc(m.unit || "") + (m.qty_text ? " (" + esc(m.qty_text) + ")" : "") + (pr ? " - " + fmtMoney(m.qty * pr) : ""); }).join("<br>") : "-"}</td>
+    <td>${Number(l.cost_amount || 0) ? fmtMoney(l.cost_amount) : "-"}</td>
+    <td>${esc(l.notes || "")}</td>
+    <td><div class="actions">
+      <button class="btn small secondary" onclick="openPhotos('care_log','${l.id}')">${photoBtnLabel("care_log", l.id, "📷 Ảnh")}</button>
+      ${planned ? `<button class="btn small" onclick="markCareDone('${l.id}')">Đã làm</button>` : ""}
+      <button class="btn small secondary" onclick="openCareForm('','${l.id}')">Sửa</button>
+      <button class="btn small danger" onclick="removeItem('care_logs','${l.id}')">Xóa</button>
+    </div></td></tr>`;
+}
+function renderCare() {
+  let list = [...cache.care_logs];
+  if (careFilter.zone_id) list = list.filter(l => careZoneIds(l).includes(careFilter.zone_id));
+  if (careFilter.planting_id) list = list.filter(l => careMatchesPlanting(l, careFilter.planting_id));
+  if (careFilter.activity) list = list.filter(l => l.activity === careFilter.activity);
+  const planned = list.filter(l => l.status === "Cần làm").sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const done = list.filter(l => l.status !== "Cần làm").sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.created_at || "").localeCompare(a.created_at || ""));
+  const zoneOpts = `<option value="">- Tất cả mảnh -</option>` + cache.zones.map(z => `<option value="${z.id}" ${z.id === careFilter.zone_id ? "selected" : ""}>${esc(z.name)}</option>`).join("");
+  const plantOpts = `<option value="">- Tất cả cây -</option>` + cache.plantings.filter(p => !careFilter.zone_id || p.zone_id === careFilter.zone_id).map(p => `<option value="${p.id}" ${p.id === careFilter.planting_id ? "selected" : ""}>${esc(p.crop_name)} - ${refName("zones", p.zone_id)}</option>`).join("");
+  const actOpts = `<option value="">- Tất cả việc -</option>` + CARE_ACTIVITIES.map(a => `<option ${a === careFilter.activity ? "selected" : ""}>${a}</option>`).join("");
+  const head = `<tr><th>Ngày</th><th>Việc</th><th>Áp dụng cho</th><th>Vật tư</th><th>Chi phí khác</th><th>Ghi chú</th><th></th></tr>`;
+  const plannedRows = planned.length ? planned.map(l => careRowHTML(l, true)).join("") : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px">Không có việc nào đang chờ. Bấm "+ Việc cần làm" để lên lịch.</td></tr>`;
+  const doneRows = done.length ? done.map(l => careRowHTML(l, false)).join("") : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px">Chưa có việc nào đã làm khớp bộ lọc.</td></tr>`;
+  $app.innerHTML = `
+    <div class="toolbar"><h2>📓 Nhật ký chăm sóc</h2>
+      <div><button class="btn secondary" onclick="openCareForm('', null, 'Cần làm')">+ Việc cần làm</button>
+      <button class="btn" onclick="openCareForm('')">+ Ghi việc đã làm</button></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn secondary small" onclick="openCareForm('Phun thuốc trừ sâu')">+ Phun thuốc sâu</button>
+      <button class="btn secondary small" onclick="openCareForm('Phun thuốc bệnh')">+ Phun thuốc bệnh</button>
+      <button class="btn secondary small" onclick="openCareForm('Bón phân')">+ Bón phân</button>
+      <button class="btn secondary small" onclick="openCareForm('Tưới nước')">+ Tưới nước</button>
+    </div>
+    <div class="card" style="display:flex;gap:8px;flex-wrap:wrap">
+      <select onchange="setCareFilter('zone_id', this.value)" style="flex:1;min-width:140px;padding:9px;border:1px solid var(--border);border-radius:10px">${zoneOpts}</select>
+      <select onchange="setCareFilter('planting_id', this.value)" style="flex:1;min-width:140px;padding:9px;border:1px solid var(--border);border-radius:10px">${plantOpts}</select>
+      <select onchange="setCareFilter('activity', this.value)" style="flex:1;min-width:140px;padding:9px;border:1px solid var(--border);border-radius:10px">${actOpts}</select>
+    </div>
+    <div class="card"><h2>✅ Việc cần làm (${planned.length})</h2><div class="table-wrap"><table>${head}${plannedRows}</table></div>
+    <p class="note">Việc lên lịch trước ở đây. Làm xong thì bấm nút "Đã làm", việc sẽ chuyển xuống nhật ký bên dưới và vật tư (nếu có khai) mới trừ vào kho.</p></div>
+    <div class="card"><h2>📓 Đã làm - nhật ký (${done.length})</h2><div class="table-wrap"><table>${head}${doneRows}</table></div>
+    <p class="note">Đây là những việc bạn đã làm: ngày tháng, công việc gì, dùng vật tư gì. Vật tư trong nhật ký đã trừ khỏi kho; sửa nhật ký thì kho tự tính lại, xóa thì vật tư được cộng trả vào kho. "Chi phí khác" là tiền mặt ngoài vật tư (tiền công, xăng dầu...).</p></div>`;
+}
+
+function periodCardHTML() {
+  const perPlantOpts = `<option value="">- Tất cả cây (toàn vườn) -</option>` + cache.plantings.map(p => `<option value="${p.id}">${esc(p.crop_name)} - ${refName("zones", p.zone_id)}</option>`).join("");
+  const saved = [...cache.periods].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+  return `<div class="card"><h2>📊 Tổng kết mùa vụ theo khoảng ngày</h2>
+      <p class="note">Mùa vụ chỉ là 1 nhãn + khoảng ngày bạn tự chọn. Ví dụ mùa bắt đầu 2/4/2026 thì chọn từ ngày đó đến ngày thu hoạch, app cộng toàn bộ chi phí chăm sóc đã làm và thu chi trong khoảng, kèm lượng vật tư đã dùng.</p><br>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="perLabel" placeholder="Nhãn mùa vụ, VD: Mùa sầu riêng 2026" style="flex:2;min-width:180px;padding:9px;border:1px solid var(--border);border-radius:10px">
+        <input id="perFrom" type="date" style="flex:1;min-width:140px;padding:9px;border:1px solid var(--border);border-radius:10px">
+        <input id="perTo" type="date" style="flex:1;min-width:140px;padding:9px;border:1px solid var(--border);border-radius:10px">
+        <select id="perPlanting" style="flex:1;min-width:160px;padding:9px;border:1px solid var(--border);border-radius:10px">${perPlantOpts}</select>
+      </div><br>
+      <button class="btn" onclick="calcPeriod(false)">Tính tổng kết</button>
+      <button class="btn secondary" onclick="calcPeriod(true)">Tính và lưu nhãn này</button>
+      <div id="periodResult" style="margin-top:12px"></div>
+      ${saved.length ? `<br><h2>Nhãn mùa vụ đã lưu</h2>` + saved.map(pr => `<p style="margin:6px 0"><b>${esc(pr.label)}</b> (${fmtDate(pr.from_date)} - ${fmtDate(pr.to_date)}) &nbsp;<button class="btn small secondary" onclick="viewPeriod('${pr.id}')">Xem lại</button> <button class="btn small danger" onclick="removeItem('periods','${pr.id}')">Xóa nhãn</button></p>`).join("") : ""}
+    </div>`;
+}
+function inPeriod(date, from, to) { return date && date >= from && date <= to; }
+function finInScope(f, plantingId) {
+  if (!plantingId) return true;
+  return f.planting_id === plantingId;
+}
+function calcPeriod(save) {
+  const label = document.getElementById("perLabel").value.trim();
+  const from = document.getElementById("perFrom").value;
+  const to = document.getElementById("perTo").value;
+  const plantingId = document.getElementById("perPlanting").value;
+  if (!from || !to || from > to) { alert("Hãy chọn khoảng ngày hợp lệ (từ ngày nhỏ hơn đến ngày)."); return; }
+  if (save && !label) { alert("Hãy nhập nhãn mùa vụ để lưu lại."); return; }
+  const logs = cache.care_logs.filter(l => l.status !== "Cần làm" && inPeriod(l.date, from, to) && (!plantingId || careMatchesPlanting(l, plantingId)));
+  const careCash = logs.reduce((a, l) => a + Number(l.cost_amount || 0), 0);
+  const fins = cache.finances.filter(f => inPeriod(f.date, from, to) && finInScope(f, plantingId));
+  const finChi = fins.filter(f => f.type === "Chi" && !f.is_stock_purchase).reduce((a, f) => a + Number(f.amount || 0), 0);
+  const purchaseTotal = cache.finances.filter(f => f.type === "Chi" && f.is_stock_purchase && inPeriod(f.date, from, to)).reduce((a, f) => a + Number(f.amount || 0), 0);
+  const finThu = fins.filter(f => f.type === "Thu").reduce((a, f) => a + Number(f.amount || 0), 0);
+  const salesThu = fins.filter(f => f.type === "Thu" && f.is_harvest_sale).reduce((a, f) => a + Number(f.amount || 0), 0);
+  const harvAgg = {};
+  cache.harvests.filter(h => inPeriod(h.date, from, to) && (!plantingId || h.planting_id === plantingId)).forEach(h => { const k = h.crop_name + "|" + (h.unit || ""); if (!harvAgg[k]) harvAgg[k] = { crop: h.crop_name, unit: h.unit || "", qty: 0, money: 0 }; harvAgg[k].qty += Number(h.qty || 0); harvAgg[k].money += Number(h.total || 0); });
+  const harvList = Object.values(harvAgg);
+  const totalChiAll = matValue + careCash + finChi;
+  const laiLo = finThu - totalChiAll;
+  const matAgg = {};
+  logs.forEach(l => (l.materials || []).forEach(m => { const k = m.name + "|" + (m.unit || ""); if (!matAgg[k]) matAgg[k] = { name: m.name, unit: m.unit || "", qty: 0, value: 0, depre: 0 }; if (m.depre) { matAgg[k].depre++; return; } matAgg[k].qty += Number(m.qty || 0); matAgg[k].value += Number(m.qty || 0) * matPrice(m); }));
+  const matList = Object.values(matAgg);
+  const matValue = matList.reduce((a, m) => a + m.value, 0);
+  document.getElementById("periodResult").innerHTML = `
+    <div class="card" style="background:var(--green-light);border:none">
+      <b>${esc(label || "Tổng kết")}:</b> ${fmtDate(from)} - ${fmtDate(to)}<br><br>
+      - Số lần chăm sóc: <b>${logs.length}</b><br>
+      - Tiền vật tư đã dùng: <b>${fmtMoney(matValue)}</b><br>
+      - Chi phí tiền mặt khi chăm sóc (công, xăng dầu...): <b>${fmtMoney(careCash)}</b><br>
+      - Chi khác ghi ở mục Thu chi: <b>${fmtMoney(finChi)}</b><br>
+      - Thu trong khoảng (mục Thu chi): <b>${fmtMoney(finThu)}</b>, trong đó bán nông sản: <b>${fmtMoney(salesThu)}</b><br>
+      - Sản lượng đã thu: ${harvList.length ? harvList.map(h => esc(h.crop) + ": " + (Math.round(h.qty * 100) / 100).toLocaleString("vi-VN") + " " + esc(h.unit) + " (" + fmtMoney(h.money) + ")").join(" · ") : "chưa ghi thu hoạch nào"}<br>
+      - <b>Tổng chi mùa vụ: ${fmtMoney(totalChiAll)}</b><br>
+      - <b style="font-size:17px">${laiLo >= 0 ? "✅ LÃI" : "🔻 LỖ"}: ${fmtMoney(Math.abs(laiLo))}</b> (Tổng thu trừ Tổng chi)<br><br>
+      <b>Vật tư đã dùng:</b> ${matList.length ? matList.map(m => esc(m.name) + ": " + (m.qty ? m.qty + " " + esc(m.unit) + (m.value ? " (" + fmtMoney(m.value) + ")" : "") : "") + (m.depre ? (m.qty ? " · " : "") + "khấu hao " + m.depre + " lần" : "")).join(" · ") : "không có"}<br>
+      <span class="note">Trong khoảng này bạn đã mua vật tư nhập kho hết ${fmtMoney(purchaseTotal)}. Khoản mua đó là tiền ra ở Thu chi, nhưng không cộng vào tổng chi mùa vụ để tránh tính 2 lần: chi phí vật tư được tính vào mùa vụ tại thời điểm dùng, theo đơn giá bình quân. Vật tư nào chưa có đơn giá thì tiền được tính bằng 0, hãy bổ sung đơn giá ở mục Kho. Riêng vật tư khấu hao (dụng cụ, thùng dùng dần): không tính tiền lúc dùng, giá trị của chúng được trừ thành 1 khoản chi Khấu hao ở Thu chi vào ngày dùng hết hoặc ngày hỏng mà bạn ghi ở mục Kho, nên mùa vụ chứa ngày đó sẽ gánh chi phí này.</span>
+    </div>`;
+  if (save) {
+    FarmDB.put("periods", { label, from_date: from, to_date: to, planting_id: plantingId }).then(() => { alert("Đã lưu nhãn mùa vụ."); render(); });
+  }
+}
+function viewPeriod(id) {
+  const pr = cache.periods.find(x => x.id === id); if (!pr) return;
+  currentView = "finances"; renderNav();
+  render().then(() => {
+    document.getElementById("perLabel").value = pr.label || "";
+    document.getElementById("perFrom").value = pr.from_date || "";
+    document.getElementById("perTo").value = pr.to_date || "";
+    document.getElementById("perPlanting").value = pr.planting_id || "";
+    calcPeriod(false);
+  });
+}
+
+/* ----- Form ghi chăm sóc ----- */
+function matRow(m) {
+  const selItem = m ? cache.inventory.find(i => i.id === m.item_id) : null;
+  const isDepre = !!(m && m.depre);
+  return `<div class="mat-row" style="display:flex;gap:6px;margin-bottom:6px">
+    <div class="mat-pick" style="position:relative;flex:2">
+      <input class="mat-item" type="text" autocomplete="off" placeholder="Gõ để tìm vật tư... VD: thuốc, thuốc sâu, npk" value="${m ? esc(m.name || (selItem ? selItem.name : "")) : ""}" data-id="${m && selItem ? selItem.id : ""}" data-name="${m ? esc(m.name || (selItem ? selItem.name : "")) : ""}" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:10px">
+      <div class="mat-sug" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:40;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-height:220px;overflow:auto"></div>
+    </div>
+    <select class="mat-mode" onchange="matModeToggle(this)" title="Số lượng: đếm được thì trừ kho theo số lượng. Khấu hao: không đếm được (dụng cụ, thùng dùng dần) - không trừ kho, trừ chi phí khi bấm nút Khấu hao ở mục Kho lúc dùng hết hoặc hỏng" style="flex:0 0 112px;padding:9px;border:1px solid var(--border);border-radius:10px">
+      <option value="count" ${!isDepre ? "selected" : ""}>Số lượng</option>
+      <option value="depre" ${isDepre ? "selected" : ""}>Khấu hao</option>
+    </select>
+    <input class="mat-qty" type="text" inputmode="decimal" placeholder="${isDepre ? "Khấu hao" : "VD: 2, 1/2, 50ml"}" value="${m && !m.depre ? (m.qty_text || m.qty) : ""}" ${isDepre ? "disabled" : ""} style="flex:1;padding:9px;border:1px solid var(--border);border-radius:10px">
+    <button type="button" class="btn small danger" onclick="this.parentElement.remove()">X</button></div>`;
+}
+// Thống kê vật tư đã từng ghi ở các lần chăm sóc trước (để ưu tiên gợi ý)
+function matUsageStats() {
+  const st = {};
+  cache.care_logs.forEach(l => (l.materials || []).forEach(m => {
+    if (!m.item_id) return;
+    if (!st[m.item_id]) st[m.item_id] = { count: 0, last: "" };
+    st[m.item_id].count++;
+    if ((l.date || "") > st[m.item_id].last) st[m.item_id].last = l.date || "";
+  }));
+  return st;
+}
+// Gợi ý vật tư khi gõ ở form chăm sóc: lọc theo tên + nhóm, gõ không dấu cũng khớp.
+// Vật tư ĐÃ DÙNG TRƯỚC ĐÂY luôn xếp trước (mục riêng khi chưa gõ gì), kèm số lần đã dùng.
+function fillMatSuggestions(input) {
+  const wrap = input.closest(".mat-pick"); if (!wrap) return;
+  const box = wrap.querySelector(".mat-sug"); if (!box) return;
+  const key = searchKey((input.value || "").trim());
+  const stats = matUsageStats();
+  // Vật tư đã chọn ở dòng khác trong cùng form thì ẩn khỏi danh sách gợi ý MẶC ĐỊNH (chưa gõ gì)
+  // cho đỡ rườm rà. Nhưng hễ gõ tìm kiếm (vài chữ như "phân xô", "amino") là hiện lại như tìm kiếm thường.
+  const otherIds = new Set();
+  if (!key) document.querySelectorAll(".mat-row").forEach(r => {
+    const inp = r.querySelector(".mat-item");
+    if (!inp || inp === input) return;
+    if (inp.dataset.id) { otherIds.add(inp.dataset.id); return; }
+    const v = (inp.value || "").trim(); if (!v) return;
+    const found = cache.inventory.find(i => searchKey(i.name) === searchKey(v));
+    if (found) otherIds.add(found.id);
+  });
+  const match = cache.inventory.filter(i => !i.retired && (!key || searchKey(i.name + " " + (i.category || "")).includes(key)))
+    .filter(i => !otherIds.has(i.id));
+  const used = match.filter(i => stats[i.id]).sort((a, b) => (stats[b.id].count - stats[a.id].count) || (stats[b.id].last || "").localeCompare(stats[a.id].last || ""));
+  const rest = match.filter(i => !stats[i.id]).sort((a, b) => searchKey(a.name).localeCompare(searchKey(b.name)));
+  const rowHTML = i => `<div class="mat-sug-item" data-id="${i.id}" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--green-light)"><b>${esc(i.name)}</b> <span class="note">(còn ${i.quantity} ${esc(i.unit || "")}) - ${esc(i.category || "")}${stats[i.id] ? " - đã dùng " + stats[i.id].count + " lần" : ""}</span></div>`;
+  const headHTML = t => `<div style="padding:6px 12px;font-size:12px;font-weight:700;color:var(--green-dark);background:var(--green-light)">${t}</div>`;
+  let html = "";
+  if (!key && used.length) {
+    html += headHTML("Đã dùng trước đây") + used.slice(0, 8).map(rowHTML).join("");
+    if (rest.length) html += headHTML("Vật tư khác trong kho") + rest.slice(0, Math.max(0, 12 - used.length)).map(rowHTML).join("");
+  } else {
+    html = [...used, ...rest].slice(0, 12).map(rowHTML).join("");
+  }
+  if (!html) { box.innerHTML = `<div style="padding:9px 12px;color:var(--muted)">Không thấy vật tư nào khớp trong kho</div>`; box.style.display = "block"; return; }
+  box.innerHTML = html;
+  box.style.display = "block";
+}
+document.addEventListener("focusin", e => { if (e.target.classList && e.target.classList.contains("mat-item")) fillMatSuggestions(e.target); });
+document.addEventListener("input", e => {
+  if (!e.target.classList || !e.target.classList.contains("mat-item")) return;
+  const input = e.target;
+  if (input.dataset.id && input.dataset.name !== input.value) { input.dataset.id = ""; }
+  fillMatSuggestions(input);
+});
+document.addEventListener("mousedown", e => {
+  const sugItem = e.target.closest ? e.target.closest(".mat-sug-item") : null;
+  if (sugItem) {
+    const wrap = sugItem.closest(".mat-pick");
+    const input = wrap ? wrap.querySelector(".mat-item") : null;
+    const it = cache.inventory.find(i => i.id === sugItem.dataset.id);
+    if (input && it) { input.value = it.name; input.dataset.id = it.id; input.dataset.name = it.name; }
+    const box = wrap ? wrap.querySelector(".mat-sug") : null;
+    if (box) box.style.display = "none";
+    return;
+  }
+  if (!(e.target.closest && e.target.closest(".mat-pick"))) document.querySelectorAll(".mat-sug").forEach(b => { b.style.display = "none"; });
+});
+// Khớp ô gõ vật tư với 1 món trong kho: theo id đã chọn, theo tên chính xác, hoặc khớp duy nhất
+function resolveMatItem(input) {
+  const raw = (input.value || "").trim();
+  if (!raw) return null;
+  if (input.dataset.id && input.dataset.name === raw) { const it = cache.inventory.find(i => i.id === input.dataset.id); if (it) return it; }
+  const key = searchKey(raw);
+  const exact = cache.inventory.find(i => searchKey(i.name) === key);
+  if (exact) return exact;
+  const cands = cache.inventory.filter(i => !i.retired && searchKey(i.name + " " + (i.category || "")).includes(key));
+  return cands.length === 1 ? cands[0] : null;
+}
+// Đọc ô số lượng vật tư: số thường, phân số 1/2, hoặc theo trọng lượng "50ml" / "200g" cho vật tư có pack_qty
+function parseMatQty(raw, item) {
+  const t = String(raw || "").trim().toLowerCase();
+  if (!t) return null;
+  const wm = t.match(/^([\d.,\/]+)\s*(g|kg|ml|lít|lit|l)$/);
+  if (wm && item && Number(item.pack_qty || 0) > 0) {
+    const base = parseVN(wm[1]);
+    if (base === "") return null;
+    const FAM = { g: ["mass", 1], kg: ["mass", 1000], ml: ["vol", 1], "lít": ["vol", 1000], lit: ["vol", 1000], l: ["vol", 1000] };
+    const pu = FAM[(item.pack_unit || "kg").toLowerCase()];
+    const en = FAM[wm[2]];
+    if (pu && en && pu[0] === en[0]) {
+      const qty = Math.round(((base * en[1]) / (Number(item.pack_qty) * pu[1])) * 10000) / 10000;
+      return { qty, text: t.replace(/\s+/g, "") };
+    }
+  }
+  const n = parseVN(t);
+  if (n === "") return null;
+  return { qty: n, text: t.includes("/") ? t : "" };
+}
+function matModeToggle(sel) {
+  const row = sel.closest(".mat-row"); if (!row) return;
+  const q = row.querySelector(".mat-qty"); if (!q) return;
+  if (sel.value === "depre") { q.value = ""; q.disabled = true; q.placeholder = "Khấu hao"; }
+  else { q.disabled = false; q.placeholder = "Số lượng"; }
+}
+function addMatRow(m, focusIt) {
+  const list = document.getElementById("matList");
+  list.insertAdjacentHTML("beforeend", matRow(m || null));
+  if (focusIt) {
+    const input = list.lastElementChild ? list.lastElementChild.querySelector(".mat-item") : null;
+    if (input) { input.focus(); fillMatSuggestions(input); }
+  }
+}
+// Các mảnh đang được tick chọn trong form ghi chăm sóc
+function checkedCareZones() { return [...document.querySelectorAll(".care-zone-cb:checked")].map(cb => cb.value); }
+function refreshCarePlantings(selected) {
+  const sel = document.getElementById("carePlanting");
+  if (!sel) return;
+  const zones = checkedCareZones();
+  const cur = selected !== undefined ? selected : sel.value;
+  if (!zones.length) {
+    sel.innerHTML = `<option value="">- Hãy tick chọn mảnh đất trước -</option>`;
+    sel.value = "";
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+  if (zones.length > 1) {
+    // Chọn nhiều mảnh: ô Áp dụng cho chọn theo LOẠI CÂY có ở các mảnh đã chọn
+    // (giá trị "crop:Tên cây", lưu vào crop_scope), hoặc chăm sóc chung cho tất cả.
+    const crops = [...new Set(cache.plantings.filter(p => zones.includes(p.zone_id)).map(p => p.crop_name))].sort((a, b) => a.localeCompare(b, "vi"));
+    sel.innerHTML = `<option value="">- Cả ${zones.length} mảnh đã chọn (chăm sóc chung) -</option>` +
+      crops.map(c => `<option value="crop:${esc(c)}" ${"crop:" + c === cur ? "selected" : ""}>${esc(c)} - ở các mảnh đã chọn</option>`).join("");
+    if (cur && !crops.some(c => "crop:" + c === cur)) sel.value = "";
+    return;
+  }
+  const list = cache.plantings.filter(p => p.zone_id === zones[0]);
+  sel.innerHTML = `<option value="">- Cả mảnh (chăm sóc chung) -</option>` + list.map(p => `<option value="${p.id}" ${p.id === cur ? "selected" : ""}>${esc(p.crop_name)}${p.variety ? " (" + esc(p.variety) + ")" : ""}</option>`).join("");
+}
+function openCareForm(preset, id, presetStatus) {
+  const rec = id ? cache.care_logs.find(x => x.id === id)
+    : { date: todayStr(), activity: preset || "", zone_id: careFilter.zone_id || "", planting_id: careFilter.planting_id || "", cost_amount: "", notes: "", materials: [], status: presetStatus || "Đã làm" };
+  editing = { store: "care_logs", id: id || null };
+  document.getElementById("modalTitle").textContent = (id ? "Sửa" : "Ghi") + " chăm sóc";
+  let initZones = careZoneIds(rec);
+  if (!id && rec.planting_id) { const p = cache.plantings.find(x => x.id === rec.planting_id); if (p) initZones = [p.zone_id]; }
+  if (!id && !initZones.length && cache.zones.length) initZones = [cache.zones[0].id];
+  const zoneChecks = cache.zones.map(z => `<label class="zone-check"><input type="checkbox" class="care-zone-cb" value="${z.id}" ${initZones.includes(z.id) ? "checked" : ""} onchange="refreshCarePlantings()">${esc(z.name)}</label>`).join("");
+  const actList = CARE_ACTIVITIES.map(a => `<option value="${a}">`).join("");
+  document.getElementById("modalForm").innerHTML = `
+    <div class="field"><label>Ngày (mặc định hôm nay, sửa được nếu nhập bù)</label><input name="date" type="date" value="${esc(rec.date || todayStr())}" required></div>
+    <div class="field"><label>Trạng thái</label><select name="status">${["Đã làm", "Cần làm"].map(x => `<option ${x === (rec.status || "Đã làm") ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+    <div class="field"><label>Mảnh đất * (tick chọn 1 hoặc nhiều mảnh)</label><div>${zoneChecks || '<span class="note">Chưa có mảnh đất nào, hãy tạo mảnh đất trước.</span>'}</div>
+      <p class="note">Cùng làm 1 việc ở nhiều mảnh trong 1 ngày thì tick hết các mảnh đó, ghi 1 lần là đủ. Số lượng vật tư và chi phí khác bạn nhập là TỔNG cho tất cả các mảnh đã chọn, kho chỉ trừ 1 lần.</p></div>
+    <div class="field"><label>Áp dụng cho</label><select name="planting_id" id="carePlanting"></select></div>
+    <div class="field"><label>Loại việc * (gõ tự do hoặc chọn gợi ý)</label><input name="activity" list="actList" value="${esc(rec.activity || "")}" placeholder="VD: Phun thuốc bệnh" required><datalist id="actList">${actList}</datalist></div>
+    <div class="field"><label>Vật tư dùng (gõ tên để tìm trong kho, bấm vào gợi ý để chọn; chỉ trừ kho khi trạng thái là Đã làm. Ô số lượng nhập được phân số 1/2, 1/4 hoặc theo trọng lượng 50ml, 200g nếu vật tư đã khai trọng lượng gói. Món không đếm được như dụng cụ, thùng dùng dần thì chọn "Khấu hao")</label><div id="matList"></div>
+      <button type="button" class="btn small secondary" onclick="addMatRow(null, true)">+ Thêm vật tư</button></div>
+    <div class="field"><label>Chi phí khác (tiền công, xăng dầu... tính bằng tiền)</label><input name="cost_amount" type="text" inputmode="decimal" data-money="1" value="${fmtNumInput(rec.cost_amount ?? "")}" placeholder="0"></div>
+    <div class="field"><label>Ghi chú</label><textarea name="notes" rows="2" placeholder="VD: Phun ngừa nấm, trời nắng ráo...">${esc(rec.notes || "")}</textarea></div>`;
+  (rec.materials || []).forEach(m => addMatRow(m));
+  if (!id && !(rec.materials || []).length) addMatRow(null, false);
+  refreshCarePlantings(rec.planting_id || (rec.crop_scope ? "crop:" + rec.crop_scope : ""));
+  overlay.classList.add("open");
+}
+async function markCareDone(id) {
+  const rec = cache.care_logs.find(x => x.id === id); if (!rec) return;
+  const mats = rec.materials || [];
+  const warns = [];
+  mats.forEach(m => { const it = cache.inventory.find(i => i.id === m.item_id); if (it && m.qty > Number(it.quantity || 0)) warns.push(m.name + ": kho còn " + it.quantity + " " + m.unit + ", cần dùng " + m.qty); });
+  if (warns.length && !confirm("Cảnh báo tồn kho:\n" + warns.join("\n") + "\n\nVẫn đánh dấu đã làm? Tồn kho sẽ bị âm.")) return;
+  for (const m of mats) await adjustStock(m.item_id, -Number(m.qty || 0));
+  rec.status = "Đã làm";
+  await FarmDB.put("care_logs", { ...rec });
+  render();
+}
+async function adjustStock(itemId, delta) {
+  if (!itemId || !delta) return;
+  const it = cache.inventory.find(i => i.id === itemId);
+  if (!it) return;
+  it.quantity = Number(it.quantity || 0) + delta;
+  await FarmDB.put("inventory", { ...it });
+}
+async function saveCare() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const fd = new FormData(form);
+  const data = editing.id ? { ...cache.care_logs.find(x => x.id === editing.id) } : {};
+  data.date = fd.get("date") || todayStr();
+  const scopeVal = fd.get("planting_id") || "";
+  data.activity = String(fd.get("activity") || "").trim();
+  const caParsed = parseVN(fd.get("cost_amount")); data.cost_amount = caParsed === "" ? 0 : caParsed;
+  data.notes = fd.get("notes") || "";
+  data.status = fd.get("status") || "Đã làm";
+  if (!data.activity) { alert("Hãy nhập loại việc chăm sóc."); return; }
+  // Mảnh đất: tick chọn được nhiều mảnh. zone_id giữ mảnh đầu tiên (tương thích bản ghi cũ),
+  // zone_ids giữ toàn bộ các mảnh đã chọn.
+  // Ô Áp dụng cho có 3 dạng: "" = chăm sóc chung các mảnh đã chọn;
+  // "crop:Tên cây" = áp dụng cho 1 loại cây ở các mảnh đã chọn (lưu crop_scope);
+  // id hồ sơ trồng = áp dụng cho đúng hồ sơ đó (chỉ khi chọn 1 mảnh), mảnh = mảnh của hồ sơ.
+  data.crop_scope = "";
+  data.planting_id = "";
+  if (scopeVal.startsWith("crop:")) {
+    data.crop_scope = scopeVal.slice(5);
+    data.zone_ids = checkedCareZones();
+    data.zone_id = data.zone_ids[0] || "";
+  } else if (scopeVal) {
+    data.planting_id = scopeVal;
+    const p = cache.plantings.find(x => x.id === scopeVal);
+    if (p) { data.zone_id = p.zone_id; data.zone_ids = [p.zone_id]; }
+  } else {
+    data.zone_ids = checkedCareZones();
+    data.zone_id = data.zone_ids[0] || "";
+  }
+  if (!data.zone_ids || !data.zone_ids.length) { alert("Hãy tạo mảnh đất và tick chọn ít nhất 1 mảnh."); return; }
+  const mats = [];
+  const badRows = [];
+  document.querySelectorAll(".mat-row").forEach(r => {
+    const itemInput = r.querySelector(".mat-item");
+    if (!itemInput || !(itemInput.value || "").trim()) return;
+    const it = resolveMatItem(itemInput);
+    if (!it) { badRows.push(itemInput.value.trim()); return; }
+    const modeEl = r.querySelector(".mat-mode");
+    if (modeEl && modeEl.value === "depre") { mats.push({ item_id: it.id, name: it.name, qty: 0, unit: it.unit || "", unit_price: 0, depre: true }); return; }
+    const rawQty = r.querySelector(".mat-qty").value;
+    if (!(rawQty || "").trim()) return;
+    const pq = parseMatQty(rawQty, it);
+    if (!pq) { badRows.push(it.name + " (số lượng: " + rawQty + ")"); return; }
+    if (pq.qty > 0) mats.push({ item_id: it.id, name: it.name, qty: pq.qty, unit: it.unit || "", unit_price: Number(it.unit_price || 0), qty_text: pq.text || "" });
+  });
+  if (badRows.length) { alert("Chưa lưu được vì có dòng vật tư chưa khớp:\n- " + badRows.join("\n- ") + "\n\nHãy bấm vào ô vật tư và chọn đúng món trong gợi ý, hoặc kiểm tra lại số lượng (VD: 2, 1/2, 50ml, 200g)."); return; }
+  const old = editing.id ? cache.care_logs.find(x => x.id === editing.id) : null;
+  const oldWasDone = old && old.status !== "Cần làm";
+  const newIsDone = data.status !== "Cần làm";
+  if (newIsDone) {
+    const warns = [];
+    mats.forEach(m => {
+      const it = cache.inventory.find(i => i.id === m.item_id); if (!it) return;
+      let avail = Number(it.quantity || 0);
+      if (oldWasDone) { const om = (old.materials || []).find(x => x.item_id === m.item_id); if (om) avail += Number(om.qty || 0); }
+      if (m.qty > avail) warns.push(m.name + ": kho còn " + avail + " " + m.unit + ", bạn dùng " + m.qty);
+    });
+    if (warns.length && !confirm("Cảnh báo tồn kho:\n" + warns.join("\n") + "\n\nVẫn lưu? Tồn kho sẽ bị âm, bạn nên kiểm tra lại kho sau.")) return;
+  }
+  if (oldWasDone) for (const om of (old.materials || [])) await adjustStock(om.item_id, Number(om.qty || 0));
+  if (newIsDone) for (const m of mats) await adjustStock(m.item_id, -Number(m.qty || 0));
+  data.materials = mats;
+  await FarmDB.put("care_logs", data);
+  closeForm(); render();
+}
+
+/* ===== Nhập tiền kiểu app ngân hàng: tự chèn dấu nghìn + chip gợi ý ===== */
+function moneySuggestions(input) {
+  const digits = input.value.replace(/\D/g, "");
+  const field = input.closest(".field") || input.parentElement;
+  let box = field.querySelector(".money-suggest");
+  if (!digits || digits.length > 9) { if (box) box.remove(); return; }
+  const n = parseInt(digits, 10);
+  if (!n) { if (box) box.remove(); return; }
+  if (!box) { box = document.createElement("div"); box.className = "money-suggest"; field.appendChild(box); }
+  const vals = [n * 1000, n * 10000, n * 100000, n * 1000000];
+  box.innerHTML = vals.map(v => `<button type="button" class="money-chip" data-val="${v}">${v.toLocaleString("vi-VN")}</button>`).join("");
+}
+document.addEventListener("input", e => {
+  const el = e.target;
+  if (el.matches && el.matches("[data-money]")) {
+    const digits = el.value.replace(/\D/g, "");
+    el.value = digits ? parseInt(digits, 10).toLocaleString("vi-VN") : "";
+    moneySuggestions(el);
+  }
+});
+document.addEventListener("click", e => {
+  const chip = e.target.closest ? e.target.closest(".money-chip") : null;
+  if (!chip) return;
+  const field = chip.closest(".field");
+  const input = field ? field.querySelector("[data-money]") : null;
+  if (input) { input.value = Number(chip.dataset.val).toLocaleString("vi-VN"); moneySuggestions(input); input.focus(); }
+});
+
+/* ===== Thu hoạch và bán (Phần 5) ===== */
+let harvestFilter = { zone: "", crop: "" };
+function recentHarvestsHTML() {
+  if (!cache.harvests.length) return "";
+  const last = [...cache.harvests].sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 5);
+  return `<div class="card"><h2>🧺 Thu hoạch gần đây</h2>
+    ${last.map(h => `<p style="margin:6px 0">${fmtDate(h.date)} - <b>${esc(h.crop_name)}</b> (${refName("zones", h.zone_id)}): ${fmtNumInput(h.qty)} ${esc(h.unit || "")} - <b>${fmtMoney(h.total || 0)}</b></p>`).join("")}
+    <br><button class="btn small secondary" onclick="go('finances')">Xem Thu hoạch (trong mục Thu chi)</button></div>`;
+}
+// Phần Thu hoạch và bán - từ v2.17 gộp vào trang Thu chi (không còn mục riêng ở menu)
+function harvestSectionHTML() {
+  const all = [...cache.harvests].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const crops = [...new Set(all.map(h => h.crop_name).filter(Boolean))];
+  const rows = all.filter(h => (!harvestFilter.zone || h.zone_id === harvestFilter.zone) && (!harvestFilter.crop || h.crop_name === harvestFilter.crop));
+  const totalMoney = rows.reduce((a, h) => a + Number(h.total || 0), 0);
+  const agg = {};
+  rows.forEach(h => { const k = h.crop_name + "|" + (h.unit || ""); if (!agg[k]) agg[k] = { crop: h.crop_name, unit: h.unit || "", qty: 0, money: 0 }; agg[k].qty += Number(h.qty || 0); agg[k].money += Number(h.total || 0); });
+  const aggList = Object.values(agg);
+  const body = rows.length ? rows.map(h => `<tr>
+      <td>${fmtDate(h.date)}</td><td><b>${esc(h.crop_name)}</b></td><td>${refName("zones", h.zone_id)}</td>
+      <td>${fmtNumInput(h.qty)} ${esc(h.unit || "")}</td><td>${fmtMoney(h.price || 0)}</td><td><b>${fmtMoney(h.total || 0)}</b></td><td>${esc(h.buyer || "")}</td>
+      <td><div class="actions">
+        <button class="btn small secondary" onclick="openHarvestForm('${h.id}')">Sửa</button>
+        <button class="btn small danger" onclick="removeItem('harvests','${h.id}')">Xóa</button>
+      </div></td></tr>`).join("")
+    : `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:22px">Chưa có lần thu hoạch nào. Bấm "+ Ghi thu hoạch" khi thu và bán nông sản.</td></tr>`;
+  return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <h2 style="margin:0">🧺 Thu hoạch và bán (${rows.length} lần)</h2>
+        <button class="btn" onclick="openHarvestForm('')">+ Ghi thu hoạch</button>
+      </div>
+      <div class="grid" style="margin-bottom:12px">
+        <div class="stat"><div class="num">${fmtMoney(totalMoney)}</div><div class="label">Tổng tiền đã bán</div></div>
+        <div class="stat"><div class="num">${rows.length}</div><div class="label">Số lần thu</div></div>
+      </div>
+      ${aggList.length ? `<p style="margin-bottom:12px"><b>Sản lượng theo cây:</b> ${aggList.map(a => `<b>${esc(a.crop)}:</b> ${(Math.round(a.qty * 100) / 100).toLocaleString("vi-VN")} ${esc(a.unit)} (${fmtMoney(a.money)})`).join(" &nbsp;·&nbsp; ")}</p>` : ""}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <select onchange="harvestFilter.zone=this.value;render()" style="padding:9px;border:1px solid var(--border);border-radius:10px">
+          <option value="">- Tất cả mảnh -</option>
+          ${cache.zones.map(z => `<option value="${z.id}" ${harvestFilter.zone === z.id ? "selected" : ""}>${esc(z.name)}</option>`).join("")}
+        </select>
+        <select onchange="harvestFilter.crop=this.value;render()" style="padding:9px;border:1px solid var(--border);border-radius:10px">
+          <option value="">- Tất cả cây -</option>
+          ${crops.map(c => `<option ${harvestFilter.crop === c ? "selected" : ""}>${esc(c)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="table-wrap"><table>
+        <tr><th>Ngày</th><th>Cây</th><th>Mảnh</th><th>Sản lượng</th><th>Đơn giá</th><th>Thành tiền</th><th>Người mua</th><th></th></tr>${body}
+      </table></div>
+      <p class="note">Mỗi phiếu thu hoạch tự tạo 1 khoản Thu "Bán nông sản" trong bảng Thu chi phía trên. Xóa phiếu ở đây thì khoản thu cũng mất, sửa phiếu thì khoản thu tự cập nhật, nên tổng kết mùa vụ ra lãi/lỗ luôn đúng.</p>
+    </div>`;
+}
+function openHarvestForm(id) {
+  const rec = id ? cache.harvests.find(x => x.id === id) : { date: todayStr(), planting_id: "", crop_name: "", qty: "", unit: "kg", price: "", buyer: "", notes: "" };
+  editing = { store: "harvests", id: id || null };
+  document.getElementById("modalTitle").textContent = (id ? "Sửa" : "Ghi") + " thu hoạch / bán";
+  const units = [...new Set(["kg", "tạ", "tấn", "trái", "buồng", "bao", "thùng", "rổ", ...cache.harvests.map(h => h.unit).filter(Boolean)])];
+  const buyers = [...new Set(cache.harvests.map(h => h.buyer).filter(Boolean))];
+  document.getElementById("modalForm").innerHTML = `
+    <div class="field"><label>Ngày thu (mặc định hôm nay, sửa được)</label><input name="date" type="date" value="${esc(rec.date || todayStr())}"></div>
+    <div class="field"><label>Cây trong vườn</label><select name="planting_id">
+      <option value="">- Không gắn hồ sơ trồng (gõ tên cây ở dưới) -</option>
+      ${cache.plantings.map(p => `<option value="${p.id}" ${p.id === rec.planting_id ? "selected" : ""}>${esc(p.crop_name)}${p.variety ? " (" + esc(p.variety) + ")" : ""} - ${esc(cache.zones.find(z => z.id === p.zone_id)?.name || "")}</option>`).join("")}
+    </select></div>
+    <div class="field"><label>Tên cây (khi không gắn hồ sơ trồng)</label><input name="crop_name" value="${esc(rec.crop_name || "")}" placeholder="VD: Vải thiều"></div>
+    <div class="field"><label>Sản lượng *</label><input name="qty" type="text" inputmode="decimal" data-vnnum value="${rec.qty !== "" && rec.qty != null ? fmtNumInput(rec.qty) : ""}" placeholder="VD: 320"></div>
+    <div class="field"><label>Đơn vị (gõ tự do; cân nặng mặc định kg - nhập tấn / tạ / yến app tự quy đổi sang kg)</label><input name="unit" list="hvUnits" value="${esc(rec.unit || "kg")}"><datalist id="hvUnits">${units.map(u => `<option value="${esc(u)}">`).join("")}</datalist></div>
+    <div class="field"><label>Đơn giá bán (đ / đơn vị)</label><input name="price" type="text" inputmode="numeric" data-money value="${rec.price !== "" && rec.price != null ? fmtNumInput(rec.price) : ""}" placeholder="VD: 28.000"></div>
+    <div class="field"><label>Thành tiền (tự tính: sản lượng x đơn giá)</label><div id="hvPreview" style="font-weight:700;font-size:17px;color:var(--green-dark)">-</div><p class="note" id="hvKgHint"></p></div>
+    <div class="field"><label>Người mua</label><input name="buyer" list="hvBuyers" value="${esc(rec.buyer || "")}" placeholder="VD: Chị Tư, vựa An Phát..."><datalist id="hvBuyers">${buyers.map(b => `<option value="${esc(b)}">`).join("")}</datalist></div>
+    <div class="field"><label>Ghi chú</label><textarea name="notes" rows="2">${esc(rec.notes || "")}</textarea></div>`;
+  const form = document.getElementById("modalForm");
+  form.querySelectorAll("[data-vnnum]").forEach(el => { el.addEventListener("blur", () => { const v = parseVN(el.value); if (v !== "") el.value = fmtNumInput(v); }); });
+  ["qty", "price", "unit"].forEach(n => { const el = form.querySelector(`[name=${n}]`); if (el) el.addEventListener("input", updateHarvestPreview); });
+  updateHarvestPreview();
+  overlay.classList.add("open");
+}
+const WEIGHT_TO_KG = { "tấn": 1000, "tan": 1000, "tạ": 100, "ta": 100, "yến": 10, "yen": 10 };
+function weightFactor(unit) { return WEIGHT_TO_KG[(unit || "").trim().toLowerCase()] || 0; }
+function updateHarvestPreview() {
+  const form = document.getElementById("modalForm"); if (!form) return;
+  const pv = document.getElementById("hvPreview"); if (!pv) return;
+  const hint = document.getElementById("hvKgHint");
+  const q = parseVN(form.querySelector("[name=qty]").value);
+  const pr = moneyVal(form.querySelector("[name=price]"));
+  const unit = (form.querySelector("[name=unit]").value || "").trim();
+  const factor = weightFactor(unit);
+  const effQty = factor ? q * factor : q;
+  pv.textContent = (q !== "" && pr !== "") ? fmtMoney(Math.round(effQty * pr)) : "-";
+  let msg = "";
+  if (q !== "" && factor) msg = "Đơn vị cân nặng tự quy về kg: " + fmtNumInput(q) + " " + unit + " = " + fmtNumInput(effQty) + " kg, đơn giá hiểu là giá 1 kg. Khi lưu, sản lượng sẽ thành " + fmtNumInput(effQty) + " kg.";
+  if (hint) hint.textContent = msg;
+}
+async function saveHarvest() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const q = n => form.querySelector(`[name=${n}]`);
+  const plantingId = q("planting_id").value;
+  let cropName = q("crop_name").value.trim();
+  let zoneId = "";
+  if (plantingId) { const p = cache.plantings.find(x => x.id === plantingId); if (p) { cropName = p.crop_name; zoneId = p.zone_id; } }
+  if (!cropName) { alert("Hãy chọn cây trong vườn hoặc gõ tên cây."); return; }
+  const qtyIn = parseVN(q("qty").value);
+  if (qtyIn === "" || qtyIn <= 0) { alert("Hãy nhập sản lượng (lớn hơn 0)."); return; }
+  const price = parseVN(q("price").value) || 0;
+  const unitIn = q("unit").value.trim() || "kg";
+  const factor = weightFactor(unitIn);
+  const qty = factor ? qtyIn * factor : qtyIn;
+  const unit = factor ? "kg" : unitIn;
+  const total = Math.round(qty * price);
+  const buyer = q("buyer").value.trim();
+  const date = q("date").value || todayStr();
+  const content = "Bán " + cropName + " (" + fmtNumInput(qty) + " " + unit + ")";
+  if (editing.id) {
+    const old = cache.harvests.find(x => x.id === editing.id);
+    await FarmDB.put("harvests", { ...old, date, planting_id: plantingId, crop_name: cropName, zone_id: zoneId, qty, unit, price, total, buyer, notes: q("notes").value || "" });
+    if (old.finance_id) {
+      const fin = cache.finances.find(f => f.id === old.finance_id);
+      if (fin) await FarmDB.put("finances", { ...fin, date, amount: total, content, zone_id: zoneId, planting_id: plantingId, notes: buyer ? "Người mua: " + buyer : "" });
+    }
+  } else {
+    const saved = await FarmDB.put("harvests", { date, planting_id: plantingId, crop_name: cropName, zone_id: zoneId, qty, unit, price, total, buyer, notes: q("notes").value || "" });
+    const fin = await FarmDB.put("finances", { date, type: "Thu", category: "Bán nông sản", content, amount: total, zone_id: zoneId, planting_id: plantingId, notes: buyer ? "Người mua: " + buyer : "", is_harvest_sale: true, harvest_id: saved.id });
+    await FarmDB.put("harvests", { ...saved, finance_id: fin.id });
+  }
+  closeForm(); render();
+}
+
+/* ===== Ảnh và Cây đặc biệt (Phần 4) ===== */
+let photoCtx = { type: "", id: "", title: "", returnTo: "dashboard" };
+let specialDetailId = null;
+let pendingPhotoData = "";
+const PHOTO_TAGS = {
+  planting: ["Lúc xuống giống", "Sinh trưởng", "Ra hoa", "Đậu trái", "Sâu bệnh", "Thu hoạch", "Khác"],
+  inventory: ["Nhãn thuốc / vật tư", "Bao bì", "Khác"],
+  care_log: ["Hiện trường", "Trước khi làm", "Sau khi làm", "Khác"],
+  special_tree: ["Phát hiện bệnh", "Đang điều trị", "Tái kiểm tra", "Đã khỏi", "Khác"]
+};
+const SPECIAL_STATUSES = ["Đang bệnh", "Đang điều trị", "Theo dõi thêm", "Đã khỏi", "Đã chết / chặt bỏ"];
+function compressImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 1280;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(1, max / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", 0.75));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+async function handlePhotoFile(input, previewId) {
+  const f = input.files && input.files[0]; if (!f) return;
+  try { pendingPhotoData = await compressImageFile(f); } catch { alert("Không đọc được file ảnh này."); return; }
+  const pv = document.getElementById(previewId);
+  if (pv) { pv.src = pendingPhotoData; pv.style.display = ""; }
+}
+function ctxTitle(type, id) {
+  if (type === "planting") { const p = cache.plantings.find(x => x.id === id); return p ? "Ảnh theo dõi - " + p.crop_name + " (" + (cache.zones.find(z => z.id === p.zone_id)?.name || "") + ")" : "Ảnh cây trồng"; }
+  if (type === "inventory") { const i = cache.inventory.find(x => x.id === id); return i ? "Ảnh nhãn - " + i.name : "Ảnh vật tư"; }
+  if (type === "care_log") { const l = cache.care_logs.find(x => x.id === id); return l ? "Ảnh - " + l.activity + " (" + fmtDate(l.date) + ")" : "Ảnh chăm sóc"; }
+  return "Ảnh";
+}
+function photoCount(type, id) { return cache.photos.filter(p => p.link_type === type && p.link_id === id && p.image).length; }
+function photoBtnLabel(type, id, base) { const n = photoCount(type, id); return base + (n ? " (" + n + ")" : ""); }
+function openPhotos(type, id) { photoCtx = { type, id, title: ctxTitle(type, id), returnTo: currentView }; pendingPhotoData = ""; go("photos"); }
+function treeAgeAt(p, dateStr) {
+  if (!p || !p.planting_sort || !dateStr) return "";
+  const days = Math.floor((new Date(dateStr) - new Date(p.planting_sort)) / 86400000);
+  if (days < 0) return "";
+  if (days < 60) return "Cây được " + days + " ngày tuổi";
+  const months = Math.floor(days / 30.44);
+  if (months < 24) return "Cây khoảng " + months + " tháng tuổi";
+  return "Cây ở năm thứ " + (Math.floor(days / 365) + 1);
+}
+function photoCardHTML(ph, extra) {
+  return `<div class="card" style="padding:10px">
+    ${ph.image ? `<a href="${ph.image}" target="_blank"><img src="${ph.image}" style="width:100%;border-radius:10px;display:block" loading="lazy"></a>` : ""}
+    <p style="margin-top:8px"><b>${fmtDate(ph.date)}</b> · <span class="tag">${esc(ph.tag || "")}</span>${extra ? `<br><span class="note">${esc(extra)}</span>` : ""}</p>
+    ${ph.note ? `<p class="note">${esc(ph.note)}</p>` : ""}
+    <button class="btn small danger" onclick="deletePhoto('${ph.id}')">Xóa ảnh</button></div>`;
+}
+function renderPhotos() {
+  const list = cache.photos.filter(ph => ph.link_type === photoCtx.type && ph.link_id === photoCtx.id)
+    .sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.created_at || "").localeCompare(a.created_at || ""));
+  const planting = photoCtx.type === "planting" ? cache.plantings.find(x => x.id === photoCtx.id) : null;
+  const tags = PHOTO_TAGS[photoCtx.type] || ["Khác"];
+  $app.innerHTML = `
+    <div class="toolbar"><h2>📷 ${esc(photoCtx.title)}</h2>
+    <button class="btn secondary" onclick="go('${photoCtx.returnTo}')">Quay lại</button></div>
+    <div class="card"><h2>Thêm ảnh mới</h2>
+      <div class="field"><label>Ngày chụp (mặc định hôm nay, sửa được)</label><input id="phDate" type="date" value="${todayStr()}"></div>
+      <div class="field"><label>Loại ảnh</label><select id="phTag">${tags.map(t => `<option>${t}</option>`).join("")}</select></div>
+      <div class="field"><label>Ghi chú</label><input id="phNote" placeholder="VD: Lá bắt đầu vàng ở ngọn..."></div>
+      <div class="field"><label>Chọn ảnh (chụp trực tiếp hoặc chọn từ máy, app tự nén nhẹ)</label>
+      <input id="phFile" type="file" accept="image/*" style="display:block" onchange="handlePhotoFile(this,'phPreview')">
+      <img id="phPreview" style="display:none;width:100%;max-width:320px;border-radius:10px;margin-top:8px"></div>
+      <button class="btn" onclick="savePhoto()">Lưu ảnh</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+      ${list.length ? list.map(ph => photoCardHTML(ph, planting ? treeAgeAt(planting, ph.date) : "")).join("") : `<div class="empty">Chưa có ảnh nào. Chụp 1 tấm đầu tiên ở khung trên.</div>`}
+    </div>`;
+}
+async function savePhoto() {
+  if (!pendingPhotoData) { alert("Hãy chọn 1 ảnh trước đã."); return; }
+  await FarmDB.put("photos", { link_type: photoCtx.type, link_id: photoCtx.id, date: document.getElementById("phDate").value || todayStr(), tag: document.getElementById("phTag").value, note: document.getElementById("phNote").value || "", image: pendingPhotoData });
+  pendingPhotoData = ""; render();
+}
+async function deletePhoto(id) { if (!confirm("Xóa ảnh / dòng ghi chép này?")) return; await FarmDB.remove("photos", id); render(); }
+function photoStatsHTML() {
+  const n = cache.photos.filter(p => p.image).length;
+  const bytes = cache.photos.reduce((a, p) => a + (p.image ? p.image.length * 0.75 : 0), 0);
+  return `<p class="note">Đang lưu ${n} ảnh trong máy này, khoảng ${(bytes / 1048576).toFixed(1)} MB. Ảnh cũng nằm trong file backup khi xuất ra, nên backup sẽ nặng hơn trước.</p>`;
+}
+
+/* ----- Cây đặc biệt ----- */
+function specialCropName(t) {
+  if (t.planting_id) { const p = cache.plantings.find(x => x.id === t.planting_id); if (p) return p.crop_name + (p.variety ? " (" + p.variety + ")" : ""); }
+  return t.crop_name || "(chưa rõ cây)";
+}
+function specialWatchHTML() {
+  const act = cache.special_trees.filter(t => ["Đang bệnh", "Đang điều trị", "Theo dõi thêm"].includes(t.status));
+  if (!act.length) return "";
+  return `<div class="card"><h2>🩺 Cây đặc biệt đang theo dõi (${act.length})</h2>
+    ${act.map(t => `<p style="margin:6px 0"><b>${esc(specialCropName(t))}</b> - ${esc(refName("zones", t.zone_id))}, Hàng ${esc(t.row_no || "?")}, Cột ${esc(t.col_no || "?")} - ${esc(t.issue || "")} <span class="tag warn">${esc(t.status)}</span> <button class="btn small secondary" onclick="openSpecialDetail('${t.id}')">Xem</button></p>`).join("")}</div>`;
+}
+function renderSpecial() {
+  const rows = [...cache.special_trees].sort((a, b) => (b.start_date || "").localeCompare(a.start_date || ""));
+  const body = rows.length ? rows.map(t => {
+    const cnt = cache.photos.filter(p => p.link_type === "special_tree" && p.link_id === t.id).length;
+    return `<tr>
+      <td><b>${esc(specialCropName(t))}</b></td>
+      <td>${refName("zones", t.zone_id)}</td>
+      <td>Hàng ${esc(t.row_no || "-")}, Cột ${esc(t.col_no || "-")}${t.position_note ? `<br><span class="note">${esc(t.position_note)}</span>` : ""}</td>
+      <td>${esc(t.issue || "")}</td>
+      <td><span class="tag">${esc(t.status || "")}</span></td>
+      <td>${fmtDate(t.start_date)}</td>
+      <td>${cnt} lần</td>
+      <td><div class="actions">
+        <button class="btn small" onclick="openSpecialDetail('${t.id}')">Theo dõi + Ảnh</button>
+        <button class="btn small secondary" onclick="openSpecialForm('${t.id}')">Sửa</button>
+        <button class="btn small danger" onclick="removeItem('special_trees','${t.id}')">Xóa</button>
+      </div></td></tr>`;
+  }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:22px">Chưa có cây đặc biệt nào. Khi phát hiện 1 cây bị bệnh cần theo dõi riêng, bấm "+ Tạo hồ sơ cây".</td></tr>`;
+  $app.innerHTML = `
+    <div class="toolbar"><h2>🩺 Cây đặc biệt (${rows.length})</h2>
+    <button class="btn" onclick="openSpecialForm('')">+ Tạo hồ sơ cây</button></div>
+    <div class="card"><div class="table-wrap"><table>
+      <tr><th>Cây</th><th>Mảnh</th><th>Vị trí</th><th>Tình trạng / bệnh</th><th>Trạng thái</th><th>Ngày phát hiện</th><th>Theo dõi</th><th></th></tr>${body}
+    </table></div>
+    <p class="note">Mỗi cây bệnh tạo 1 hồ sơ riêng với vị trí Hàng + Cột. Bấm "Theo dõi" để ghi các lần điều trị kèm ảnh theo tuần và xem cây tiến triển ra sao.</p></div>`;
+}
+function openSpecialDetail(id) { specialDetailId = id; pendingPhotoData = ""; go("special_detail"); }
+function renderSpecialDetail() {
+  const t = cache.special_trees.find(x => x.id === specialDetailId);
+  if (!t) { go("special"); return; }
+  const entries = cache.photos.filter(p => p.link_type === "special_tree" && p.link_id === t.id)
+    .sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.created_at || "").localeCompare(b.created_at || ""));
+  const tags = PHOTO_TAGS.special_tree;
+  $app.innerHTML = `
+    <div class="toolbar"><h2>🩺 ${esc(specialCropName(t))}</h2>
+    <button class="btn secondary" onclick="go('special')">Quay lại danh sách</button></div>
+    <div class="card">
+      <p><b>Mảnh:</b> ${refName("zones", t.zone_id)} &nbsp;·&nbsp; <b>Vị trí:</b> Hàng ${esc(t.row_no || "-")}, Cột ${esc(t.col_no || "-")}${t.position_note ? " (" + esc(t.position_note) + ")" : ""}</p>
+      <p style="margin-top:6px"><b>Tình trạng:</b> ${esc(t.issue || "")} &nbsp;·&nbsp; <b>Trạng thái:</b> <span class="tag">${esc(t.status || "")}</span> &nbsp;·&nbsp; <b>Ngày phát hiện:</b> ${fmtDate(t.start_date)}</p>
+      ${t.notes ? `<p class="note" style="margin-top:6px">${esc(t.notes)}</p>` : ""}
+      <br><button class="btn small secondary" onclick="openSpecialForm('${t.id}')">Sửa hồ sơ (đổi trạng thái, vị trí...)</button>
+    </div>
+    <div class="card"><h2>Thêm lần theo dõi / điều trị</h2>
+      <div class="field"><label>Ngày (mặc định hôm nay, sửa được)</label><input id="spDate" type="date" value="${todayStr()}"></div>
+      <div class="field"><label>Giai đoạn</label><select id="spTag">${tags.map(x => `<option>${x}</option>`).join("")}</select></div>
+      <div class="field"><label>Đã làm gì / ghi chú</label><textarea id="spNote" rows="2" placeholder="VD: Phun thuốc X liều..., cắt bỏ cành bệnh..."></textarea></div>
+      <div class="field"><label>Ảnh lần này (không bắt buộc)</label>
+      <input id="spFile" type="file" accept="image/*" style="display:block" onchange="handlePhotoFile(this,'spPreview')">
+      <img id="spPreview" style="display:none;width:100%;max-width:320px;border-radius:10px;margin-top:8px"></div>
+      <button class="btn" onclick="addSpecialEntry()">Lưu lần theo dõi</button>
+    </div>
+    <h2 style="margin:6px 0 10px">Dòng thời gian điều trị (${entries.length})</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px">
+      ${entries.length ? entries.map(ph => photoCardHTML(ph, "")).join("") : `<div class="empty">Chưa có lần theo dõi nào. Thêm lần đầu tiên ở khung trên.</div>`}
+    </div>`;
+}
+async function addSpecialEntry() {
+  const note = document.getElementById("spNote").value || "";
+  if (!note && !pendingPhotoData) { alert("Hãy ghi chú đã điều trị gì, hoặc chọn 1 ảnh."); return; }
+  await FarmDB.put("photos", { link_type: "special_tree", link_id: specialDetailId, date: document.getElementById("spDate").value || todayStr(), tag: document.getElementById("spTag").value, note, image: pendingPhotoData || "" });
+  pendingPhotoData = ""; render();
+}
+function refreshSpecialPlantings(selected) {
+  const zoneEl = document.querySelector('[name=zone_id]');
+  const sel = document.getElementById("spPlanting");
+  if (!zoneEl || !sel) return;
+  const cur = selected !== undefined ? selected : sel.value;
+  const list = cache.plantings.filter(p => !zoneEl.value || p.zone_id === zoneEl.value);
+  sel.innerHTML = `<option value="">- Không gắn hồ sơ trồng (gõ tên cây ở dưới) -</option>` + list.map(p => `<option value="${p.id}" ${p.id === cur ? "selected" : ""}>${esc(p.crop_name)}${p.variety ? " (" + esc(p.variety) + ")" : ""}</option>`).join("");
+}
+function openSpecialForm(id) {
+  const rec = id ? cache.special_trees.find(x => x.id === id) : { zone_id: "", planting_id: "", crop_name: "", row_no: "", col_no: "", position_note: "", issue: "", status: "Đang điều trị", start_date: todayStr(), notes: "" };
+  editing = { store: "special_trees", id: id || null };
+  document.getElementById("modalTitle").textContent = (id ? "Sửa" : "Tạo") + " hồ sơ cây đặc biệt";
+  const zoneOpts = cache.zones.map(z => `<option value="${z.id}" ${z.id === rec.zone_id ? "selected" : ""}>${esc(z.name)}</option>`).join("");
+  document.getElementById("modalForm").innerHTML = `
+    <div class="field"><label>Mảnh đất *</label><select name="zone_id" onchange="refreshSpecialPlantings()">${zoneOpts}</select></div>
+    <div class="field"><label>Thuộc hồ sơ trồng (nếu có)</label><select name="planting_id" id="spPlanting"></select></div>
+    <div class="field"><label>Tên cây (khi không gắn hồ sơ trồng)</label><input name="crop_name" value="${esc(rec.crop_name || "")}" placeholder="VD: Hồ tiêu"></div>
+    <div class="field"><label>Hàng</label><input name="row_no" value="${esc(rec.row_no || "")}" placeholder="VD: 8"></div>
+    <div class="field"><label>Cột</label><input name="col_no" value="${esc(rec.col_no || "")}" placeholder="VD: 2"></div>
+    <div class="field"><label>Ghi chú vị trí</label><input name="position_note" value="${esc(rec.position_note || "")}" placeholder="VD: Gần mương, đầu hàng..."></div>
+    <div class="field"><label>Tình trạng / bệnh</label><input name="issue" value="${esc(rec.issue || "")}" placeholder="VD: Vàng lá, nứt thân xì mủ..."></div>
+    <div class="field"><label>Trạng thái</label><select name="status">${SPECIAL_STATUSES.map(x => `<option ${x === rec.status ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+    <div class="field"><label>Ngày phát hiện</label><input name="start_date" type="date" value="${esc(rec.start_date || todayStr())}"></div>
+    <div class="field"><label>Ghi chú</label><textarea name="notes" rows="2">${esc(rec.notes || "")}</textarea></div>`;
+  refreshSpecialPlantings(rec.planting_id || "");
+  overlay.classList.add("open");
+}
+async function saveSpecial() {
+  const form = document.getElementById("modalForm");
+  if (!form.reportValidity()) return;
+  const fd = new FormData(form);
+  const data = editing.id ? { ...cache.special_trees.find(x => x.id === editing.id) } : {};
+  ["zone_id", "planting_id", "crop_name", "row_no", "col_no", "position_note", "issue", "status", "start_date", "notes"].forEach(k => data[k] = fd.get(k) || "");
+  if (data.planting_id) { const p = cache.plantings.find(x => x.id === data.planting_id); if (p) { data.zone_id = p.zone_id; data.crop_name = p.crop_name; } }
+  if (!data.zone_id) { alert("Hãy tạo và chọn mảnh đất trước."); return; }
+  if (!data.crop_name) { alert("Hãy gắn hồ sơ trồng hoặc gõ tên cây."); return; }
+  await FarmDB.put("special_trees", data);
+  closeForm(); render();
+}
+
+/* ===== Online: Supabase + đồng bộ (Giai đoạn 2) =====
+   Thiết kế: dữ liệu luôn ghi vào IndexedDB trên máy trước (offline vẫn dùng được),
+   rồi đẩy lên Supabase qua hàng đợi. Mở app thì kéo dữ liệu mới nhất từ cloud về.
+   Xung đột giải quyết theo mốc updated_at mới nhất (last-write-wins). */
+const Cloud = {
+  cfg() { try { return JSON.parse(localStorage.getItem("tachi_cloud") || "null"); } catch { return null; } },
+  session() { try { return JSON.parse(localStorage.getItem("tachi_session") || "null"); } catch { return null; } },
+  saveSession(s) { if (s) localStorage.setItem("tachi_session", JSON.stringify(s)); else localStorage.removeItem("tachi_session"); },
+  ready() { const c = Cloud.cfg(), s = Cloud.session(); return !!(c && s && s.access_token); },
+  async req(path, opts = {}) {
+    const c = Cloud.cfg(); if (!c) throw new Error("Chưa cấu hình Supabase");
+    const s = Cloud.session();
+    const headers = { apikey: c.anonKey, "Content-Type": "application/json", ...(opts.headers || {}) };
+    if (s && s.access_token) headers.Authorization = "Bearer " + s.access_token;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 25000);
+    try { return await fetch(c.url.replace(/\/$/, "") + path, { ...opts, headers, signal: ctl.signal }); }
+    catch (e) { if (e && e.name === "AbortError") throw new Error("Máy chủ phản hồi quá chậm (quá 25 giây không trả lời)"); throw e; }
+    finally { clearTimeout(timer); }
+  },
+  async auth(path, body) {
+    const res = await Cloud.req(path, { method: "POST", body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error_description || data.msg || data.message || ("Lỗi " + res.status));
+    return data;
+  },
+  async signUp(email, password) { const d = await Cloud.auth("/auth/v1/signup", { email, password }); if (d.access_token) Cloud.saveSession(sessOf(d)); return d; },
+  async signIn(email, password) { const d = await Cloud.auth("/auth/v1/token?grant_type=password", { email, password }); Cloud.saveSession(sessOf(d)); return d; },
+  async refresh() { const s = Cloud.session(); if (!s || !s.refresh_token) return false; try { const d = await Cloud.auth("/auth/v1/token?grant_type=refresh_token", { refresh_token: s.refresh_token }); Cloud.saveSession(sessOf(d)); return true; } catch { return false; } },
+  signOut() { Cloud.saveSession(null); setSyncStatus(); }
+};
+function sessOf(d) { return { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: Date.now() + (d.expires_in || 3600) * 1000, user: { id: d.user.id, email: d.user.email } }; }
+async function ensureToken() { const s = Cloud.session(); if (s && s.expires_at && s.expires_at - Date.now() < 120000) await Cloud.refresh(); }
+function getQueue() { try { return JSON.parse(localStorage.getItem("tachi_pushq") || "[]"); } catch { return []; } }
+function setQueue(q) { localStorage.setItem("tachi_pushq", JSON.stringify(q)); setSyncStatus(); }
+let SYNC_SUPPRESS = false;
+let lastSyncError = "";
+function enqueue(op, store, id) {
+  if (!Cloud.cfg() || SYNC_SUPPRESS) return;
+  const q = getQueue().filter(x => !(x.store === store && x.id === id));
+  q.push({ op, store, id, ts: Date.now() });
+  setQueue(q); scheduleFlush();
+}
+let flushTimer = null;
+function scheduleFlush() { if (flushTimer) return; flushTimer = setTimeout(() => { flushTimer = null; flushQueue(); }, 1200); }
+function setSyncStatus() {
+  const el = document.getElementById("syncStatus"); if (!el) return;
+  const c = Cloud.cfg(), s = Cloud.session();
+  if (!c) { el.textContent = "☁ Chưa kết nối online"; return; }
+  if (!s) { el.textContent = "☁ Chưa đăng nhập"; return; }
+  const q = getQueue().length;
+  el.textContent = q ? "⏳ Chờ đồng bộ (" + q + ")" : "☁ Đã đồng bộ";
+}
+const REMOTE_COLS = {
+  zones: ["name", "location", "area", "unit", "status", "notes"],
+  crops: ["name", "group", "unit", "notes"],
+  plantings: ["zone_id", "crop_name", "variety", "quantity", "planting_text", "planting_sort", "status", "notes"],
+  care_logs: ["date", "status", "scope", "planting_id", "zone_id", "zone_ids", "crop_scope", "activity", "materials", "cost_amount", "notes"],
+  inventory: ["name", "category", "quantity", "unit", "unit_price", "min_stock", "ingredients", "notes", "pack_qty", "pack_unit", "retired", "retired_at", "retire_reason"],
+  stock_ins: ["item_id", "date", "qty", "price", "total", "notes", "finance_id"],
+  finances: ["date", "type", "category", "content", "amount", "zone_id", "planting_id", "notes", "is_stock_purchase", "stock_in_id", "is_harvest_sale", "harvest_id", "is_depre_writeoff", "item_id", "is_stock_check_loss", "stock_check_id", "is_worker_payment", "payment_id"],
+  periods: ["label", "from_date", "to_date", "planting_id"],
+  harvests: ["date", "planting_id", "crop_name", "zone_id", "qty", "unit", "price", "total", "buyer", "notes", "finance_id"],
+  stock_checks: ["date", "note", "items", "loss_value", "surplus_value", "finance_id"],
+  workers: ["name", "phone", "kind", "day_rate", "status", "notes"],
+  work_logs: ["date", "worker_id", "mode", "days", "rate", "qty", "unit", "piece_rate", "amount", "zone_id", "activity", "note"],
+  worker_payments: ["date", "worker_id", "kind", "amount", "note", "finance_id"],
+  special_trees: ["zone_id", "planting_id", "crop_name", "row_no", "col_no", "position_note", "issue", "status", "start_date", "notes"],
+  photos: ["link_type", "link_id", "date", "tag", "note", "image", "image_path"],
+  seasons: ["name", "notes"],
+  tasks: ["title", "notes"]
+};
+const REMOTE_RENAME = { stock_ins: { price: "unit_price", notes: "note" } };
+function toRemote(store, rec) {
+  const r = { id: rec.id, user_id: Cloud.session().user.id, created_at: rec.created_at || null, updated_at: rec.updated_at || null };
+  const ren = REMOTE_RENAME[store] || {};
+  for (const col of (REMOTE_COLS[store] || [])) { let v = rec[ren[col] || col]; if (v === "" || v === undefined) v = null; r[col] = v; }
+  // Các cột boolean trên server là NOT NULL: phải luôn gửi true/false, không được gửi null (v2.21)
+  for (const b of ["is_stock_purchase", "is_harvest_sale", "is_depre_writeoff", "is_stock_check_loss", "is_worker_payment", "retired"]) if (b in r) r[b] = !!rec[b];
+  if (store === "finances" && !r.notes && rec.note) r.notes = rec.note;
+  if (store === "care_logs" && !Array.isArray(r.materials)) r.materials = [];
+  if (store === "care_logs" && !Array.isArray(r.zone_ids)) r.zone_ids = r.zone_id ? [r.zone_id] : [];
+  return r;
+}
+function fromRemote(store, row) {
+  const r = { ...row };
+  delete r.user_id;
+  if (store === "stock_ins") { if (r.price != null && r.unit_price == null) r.unit_price = r.price; if (r.notes && !r.note) r.note = r.notes; }
+  if (store === "finances" && r.notes && !r.note) r.note = r.notes;
+  if (store === "photos" && r.image_path && !r.image) { const c = Cloud.cfg(); r.image = c.url.replace(/\/$/, "") + "/storage/v1/object/public/photos/" + r.image_path; }
+  return r;
+}
+async function preparePhotoRemote(rec, body) {
+  const uid = Cloud.session().user.id;
+  const path = uid + "/" + rec.id + ".jpg";
+  if (rec.image && rec.image.startsWith("data:")) {
+    const blob = await (await fetch(rec.image)).blob();
+    const c = Cloud.cfg();
+    const res = await fetch(c.url.replace(/\/$/, "") + "/storage/v1/object/photos/" + path, { method: "POST", headers: { apikey: c.anonKey, Authorization: "Bearer " + Cloud.session().access_token, "Content-Type": "image/jpeg", "x-upsert": "true" }, body: blob });
+    if (!res.ok) throw new Error("Tải ảnh lên thất bại (" + res.status + ")");
+    body.image_path = path; body.image = "";
+    SYNC_SUPPRESS = true;
+    try { await _localPut("photos", { ...rec, image_path: path }); } finally { SYNC_SUPPRESS = false; }
+  } else if (rec.image_path) { body.image_path = rec.image_path; body.image = ""; }
+  return body;
+}
+async function pushJob(job) {
+  if (job.op === "del") {
+    const res = await Cloud.req("/rest/v1/" + job.store + "?id=eq." + job.id, { method: "DELETE" });
+    if (!res.ok && res.status !== 404) throw new Error("Xóa trên cloud thất bại (" + res.status + ")");
+    if (job.store === "photos") { const uid = Cloud.session().user.id; Cloud.req("/storage/v1/object/photos/" + uid + "/" + job.id + ".jpg", { method: "DELETE" }).catch(() => {}); }
+    return;
+  }
+  const rec = (await _localAll(job.store)).find(x => x.id === job.id);
+  if (!rec) return;
+  let body = toRemote(job.store, rec);
+  if (job.store === "photos") body = await preparePhotoRemote(rec, body);
+  const res = await Cloud.req("/rest/v1/" + job.store + "?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(body) });
+  if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error("Đẩy dữ liệu thất bại (" + res.status + ") " + t.slice(0, 120)); }
+}
+let flushPromise = null;
+let lastFlushInfo = null;
+async function flushQueue() {
+  if (flushPromise) return flushPromise;
+  if (!Cloud.ready()) { lastFlushInfo = { guard: "notready", tried: 0, ok: 0 }; setSyncStatus(); return; }
+  if (!navigator.onLine) { lastFlushInfo = { guard: "offline", tried: 0, ok: 0 }; setSyncStatus(); return; }
+  flushPromise = (async () => {
+    let tried = 0, ok = 0;
+    try {
+      await ensureToken();
+      const q = getQueue();
+      lastSyncError = "";
+      const doneKeys = new Set();
+      for (const job of q) {
+        tried++;
+        try { await pushJob(job); ok++; doneKeys.add(job.store + "|" + job.id + "|" + job.ts); }
+        catch (e) { lastSyncError = job.store + ": " + ((e && e.message) || String(e)); break; }
+      }
+      if (doneKeys.size) setQueue(getQueue().filter(x => !doneKeys.has(x.store + "|" + x.id + "|" + x.ts)));
+      lastFlushInfo = { guard: null, tried, ok };
+    } catch (e) { lastSyncError = "flush: " + ((e && e.message) || String(e)); lastFlushInfo = { guard: "throw", tried, ok }; }
+    finally { flushPromise = null; setSyncStatus(); }
+  })();
+  return flushPromise;
+}
+async function pullAll() {
+  if (!Cloud.ready()) return;
+  await ensureToken();
+  const uid = Cloud.session().user.id;
+  SYNC_SUPPRESS = true;
+  try {
+    for (const store of STORES) {
+      const res = await Cloud.req("/rest/v1/" + store + "?select=*&user_id=eq." + uid + "&order=updated_at.asc", { method: "GET" });
+      if (!res.ok) continue;
+      const rows = await res.json();
+      const local = await _localAll(store);
+      const localById = {}; local.forEach(r => localById[r.id] = r);
+      const remoteIds = new Set();
+      for (const row of rows) {
+        remoteIds.add(row.id);
+        const lr = localById[row.id];
+        const remoteRec = fromRemote(store, row);
+        if (!lr || (remoteRec.updated_at || "") > (lr.updated_at || "")) {
+          if (store === "photos" && lr && lr.image && String(lr.image).startsWith("data:")) remoteRec.image = lr.image;
+          await _localPut(store, remoteRec);
+        }
+      }
+      const flag = "tachi_synced_" + store;
+      if (!localStorage.getItem(flag)) {
+        const queued = new Set(getQueue().filter(j => j.store === store).map(j => j.id));
+        for (const lr of local) if (!remoteIds.has(lr.id) && !queued.has(lr.id)) await _localRemove(store, lr.id);
+        localStorage.setItem(flag, "1");
+      }
+    }
+  } finally { SYNC_SUPPRESS = false; }
+}
+async function syncNow(manual) {
+  if (!Cloud.cfg()) { if (manual) alert("Chưa nhập cấu hình Supabase. Hãy điền Project URL và anon key trong thẻ Tài khoản online ở mục Dữ liệu."); return; }
+  if (!Cloud.session()) { if (manual) alert("Hãy đăng nhập tài khoản online trước."); return; }
+  await flushQueue();
+  await pullAll();
+  await flushQueue();
+  await reload(); render(); setSyncStatus();
+  if (manual) { const left = getQueue().length; if (left) alert("Đã thử đồng bộ nhưng còn " + left + " thay đổi chưa đẩy lên được." + (lastFlushInfo ? "\nLần đẩy gần nhất: " + (lastFlushInfo.guard ? "chưa chạy được (" + lastFlushInfo.guard + ")" : "thử " + lastFlushInfo.tried + " mục, thành công " + lastFlushInfo.ok + " mục") + "." : "") + (lastSyncError ? "\nLỗi: " + lastSyncError : "") + "\nHãy chụp lại thông báo này để kiểm tra tiếp."); else alert("Đã đồng bộ xong. Dữ liệu trên máy và trên cloud đã khớp nhau."); }
+}
+/* Bọc lớp dữ liệu local: ghi local trước, đồng bộ chạy nền */
+const _localPut = FarmDB.put.bind(FarmDB);
+const _localRemove = FarmDB.remove.bind(FarmDB);
+const _localAll = FarmDB.all.bind(FarmDB);
+FarmDB.put = async (store, rec) => { const saved = await _localPut(store, rec); enqueue("put", store, saved.id); return saved; };
+FarmDB.remove = async (store, id) => { await _localRemove(store, id); enqueue("del", store, id); };
+window.addEventListener("online", () => scheduleFlush());
+/* Thẻ tài khoản trong mục Dữ liệu */
+function cloudCardHTML() {
+  const c = Cloud.cfg(), s = Cloud.session();
+  if (!c) return `<div class="card"><h2>☁️ Tài khoản và đồng bộ online (Giai đoạn 2)</h2>
+    <p class="note">Kết nối app với database online trên Supabase để điện thoại và PC dùng chung 1 dữ liệu. Chưa kết nối thì app vẫn chạy offline bình thường như trước. Cách lấy 2 thông số dưới đây có trong file hướng dẫn Muse đã gửi (tạo dự án Supabase, chạy file SQL, rồi vào Settings - API để copy).</p><br>
+    <div class="field"><label>Project URL</label><input id="clUrl" placeholder="https://xxxxx.supabase.co"></div>
+    <div class="field"><label>anon key (khóa công khai)</label><input id="clKey" placeholder="eyJhbGciOi..."></div>
+    <button class="btn" onclick="saveCloudConfig()">Lưu cấu hình</button></div>`;
+  if (!s) return `<div class="card"><h2>☁️ Tài khoản và đồng bộ online (Giai đoạn 2)</h2>
+    <p class="note">Đã lưu cấu hình Supabase: ${esc(c.url)}. Hãy đăng nhập, hoặc đăng ký tài khoản mới nếu đây là lần đầu. Lần đăng nhập đầu tiên, toàn bộ dữ liệu đang có trên máy này sẽ được đẩy lên online.</p><br>
+    <div class="field"><label>Email</label><input id="clEmail" type="email" placeholder="email@cuaban.com"></div>
+    <div class="field"><label>Mật khẩu</label><input id="clPass" type="password" placeholder="Tự đặt, ít nhất 6 ký tự"></div>
+    <button class="btn" onclick="cloudLogin()">Đăng nhập và đồng bộ</button>
+    <button class="btn secondary" onclick="cloudRegister()">Đăng ký tài khoản mới</button>
+    <button class="btn danger" onclick="clearCloudConfig()">Xóa cấu hình</button></div>`;
+  return `<div class="card"><h2>☁️ Tài khoản và đồng bộ online (Giai đoạn 2)</h2>
+    <p class="note">Đang đăng nhập: <b>${esc(s.user.email || "")}</b><br>Trạng thái: ${getQueue().length ? "còn " + getQueue().length + " thay đổi đang chờ đẩy lên" : "đã đồng bộ"}.${lastSyncError ? `<br><span style="color:var(--danger)">Lỗi đẩy dữ liệu gần nhất: ${esc(lastSyncError)}</span>` : ""}${lastFlushInfo ? `<br>Lần đẩy gần nhất: ${lastFlushInfo.guard ? "chưa chạy được (" + ({ notready: "chưa đăng nhập hoặc chưa cấu hình", offline: "trình duyệt báo không có mạng", throw: "lỗi bất ngờ khi đẩy" }[lastFlushInfo.guard] || lastFlushInfo.guard) + ")" : "đã thử " + lastFlushInfo.tried + " mục, thành công " + lastFlushInfo.ok + " mục"}.` : ""}</p><br>
+    <button class="btn" onclick="syncNow(true)">🔄 Đồng bộ ngay</button>
+    <button class="btn secondary" onclick="cloudLogout()">Đăng xuất</button>
+    <p class="note" style="margin-top:8px">Khi có mạng, app tự đồng bộ mỗi khi bạn thêm/sửa/xóa và mỗi khi mở app. Mất mạng thì cứ ghi bình thường, app xếp hàng chờ và tự đẩy lên khi có mạng lại.</p></div>`;
+}
+function saveCloudConfig() {
+  const url = document.getElementById("clUrl").value.trim();
+  const anonKey = document.getElementById("clKey").value.trim();
+  if (!url.startsWith("https://") || !anonKey) { alert("Hãy nhập đủ Project URL (bắt đầu bằng https://) và anon key."); return; }
+  localStorage.setItem("tachi_cloud", JSON.stringify({ url, anonKey }));
+  setSyncStatus(); render();
+}
+function clearCloudConfig() { if (!confirm("Xóa cấu hình Supabase trên máy này? Dữ liệu trên máy vẫn giữ nguyên.")) return; localStorage.removeItem("tachi_cloud"); Cloud.signOut(); render(); }
+async function cloudLogin() {
+  const email = document.getElementById("clEmail").value.trim();
+  const password = document.getElementById("clPass").value;
+  if (!email || !password) { alert("Hãy nhập email và mật khẩu."); return; }
+  try { await Cloud.signIn(email, password); for (const s of STORES) for (const rec of (cache[s] || [])) enqueue("put", s, rec.id); await syncNow(false); alert("Đăng nhập thành công. Dữ liệu trên máy đã được đẩy lên và khớp với cloud."); render(); }
+  catch (e) { alert("Đăng nhập thất bại: " + e.message); }
+}
+async function cloudRegister() {
+  const email = document.getElementById("clEmail").value.trim();
+  const password = document.getElementById("clPass").value;
+  if (!email || !password) { alert("Hãy nhập email và mật khẩu."); return; }
+  try {
+    const d = await Cloud.signUp(email, password);
+    if (Cloud.session()) { for (const s of STORES) for (const rec of (cache[s] || [])) enqueue("put", s, rec.id); await syncNow(false); alert("Đăng ký thành công và đã đồng bộ dữ liệu lên cloud."); }
+    else alert("Đã đăng ký. Supabase có thể đã gửi email xác nhận - hãy bấm link trong email rồi quay lại Đăng nhập. (Mẹo: tắt mục Confirm email trong Supabase - Authentication - Providers - Email thì khỏi cần bước này.)");
+    render();
+  } catch (e) { alert("Đăng ký thất bại: " + e.message); }
+}
+function cloudLogout() { Cloud.signOut(); render(); }
+
+/* ===== Thời tiết ở dải ngang (Open-Meteo, miễn phí, không cần khóa) ===== */
+function weatherLoc() { try { return JSON.parse(localStorage.getItem("tachi_weather_loc") || "null"); } catch { return null; } }
+const WMO_VN = { 0: "Trời quang", 1: "Ít mây", 2: "Mây rải rác", 3: "Nhiều mây", 45: "Sương mù", 48: "Sương mù", 51: "Mưa phùn nhẹ", 53: "Mưa phùn", 55: "Mưa phùn dày", 61: "Mưa nhẹ", 63: "Mưa vừa", 65: "Mưa to", 66: "Mưa băng nhẹ", 67: "Mưa băng", 71: "Tuyết nhẹ", 73: "Tuyết vừa", 75: "Tuyết dày", 80: "Mưa rào nhẹ", 81: "Mưa rào", 82: "Mưa rào mạnh", 95: "Dông", 96: "Dông kèm mưa đá nhẹ", 99: "Dông kèm mưa đá" };
+function wmoIcon(code) { if (code === 0) return "☀️"; if (code <= 2) return "🌤️"; if (code === 3) return "☁️"; if (code === 45 || code === 48) return "🌫️"; if (code >= 95) return "⛈️"; if (code >= 80) return "🌦️"; if (code >= 51) return "🌧️"; return "🌡️"; }
+let weatherTimer = null;
+function initWeather() { renderWeatherBar(); if (weatherTimer) clearInterval(weatherTimer); weatherTimer = setInterval(renderWeatherBar, 30 * 60 * 1000); }
+async function renderWeatherBar() {
+  const bar = document.getElementById("weatherBar"); if (!bar) return;
+  const loc = weatherLoc();
+  if (!loc) { bar.style.display = "none"; return; }
+  try {
+    let data = null;
+    const cacheRaw = localStorage.getItem("tachi_weather_cache");
+    if (cacheRaw) { const c = JSON.parse(cacheRaw); if (Date.now() - c.ts < 30 * 60 * 1000 && c.key === loc.lat + "," + loc.lon) data = c.data; }
+    if (!data) {
+      const url = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon + "&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&timezone=auto&forecast_days=4";
+      const res = await fetch(url); if (!res.ok) throw new Error("wx " + res.status);
+      data = await res.json();
+      localStorage.setItem("tachi_weather_cache", JSON.stringify({ ts: Date.now(), key: loc.lat + "," + loc.lon, data }));
+    }
+    const cur = data.current, d = data.daily;
+    const rain0 = d.precipitation_probability_max && d.precipitation_probability_max[0] != null ? " · khả năng mưa " + d.precipitation_probability_max[0] + "%" : "";
+    const days = d.time.map((t, i) => i === 0 ? "" : `<span style="margin-left:16px">${wmoIcon(d.weather_code[i])} ${fmtDate(t)}: <b>${Math.round(d.temperature_2m_min[i])}°-${Math.round(d.temperature_2m_max[i])}°</b>${d.precipitation_probability_max && d.precipitation_probability_max[i] != null ? " · mưa " + d.precipitation_probability_max[i] + "%" : ""}</span>`).join("");
+    bar.innerHTML = `<div style="max-width:1360px;margin:0 auto"><span>${wmoIcon(cur.weather_code)} <b>${esc(loc.name || "Vườn")}</b>: ${WMO_VN[cur.weather_code] || ""}, <b>${Math.round(cur.temperature_2m)}°C</b></span><span style="margin-left:16px">Hôm nay: <b>${Math.round(d.temperature_2m_min[0])}°-${Math.round(d.temperature_2m_max[0])}°</b>${rain0}</span>${days}</div>`;
+    bar.style.display = "";
+  } catch { bar.style.display = "none"; }
+}
+function weatherCardHTML() {
+  const loc = weatherLoc();
+  return `<div class="card"><h2>🌦️ Vị trí vườn cho dự báo thời tiết</h2>
+    <p class="note">Đặt vị trí vườn để dải ngang phía trên app hiện dự báo thời tiết (nguồn Open-Meteo, miễn phí, chỉ hiện khi có mạng). ${loc ? "Đang đặt: <b>" + esc(loc.name || "") + "</b> (" + loc.lat + ", " + loc.lon + ")." : "Chưa đặt vị trí nên dải thời tiết đang ẩn."}</p><br>
+    <div class="field"><label>Tên nơi (xã / huyện / tỉnh)</label><input id="wxName" value="${loc ? esc(loc.name || "") : ""}" placeholder="VD: Ea Kar, Đắk Lắk"></div>
+    <div class="field"><label>Vĩ độ (lat)</label><input id="wxLat" value="${loc ? loc.lat : ""}" placeholder="VD: 12.6797"></div>
+    <div class="field"><label>Kinh độ (lon)</label><input id="wxLon" value="${loc ? loc.lon : ""}" placeholder="VD: 108.0447"></div>
+    <button class="btn" onclick="saveWeatherLoc()">Lưu vị trí</button>
+    <button class="btn secondary" onclick="geoWeatherLoc()">📍 Lấy vị trí của máy này</button>
+    ${loc ? `<button class="btn danger" onclick="clearWeatherLoc()">Tắt thời tiết</button>` : ""}
+    <p class="note" style="margin-top:8px">Mẹo lấy tọa độ: mở Google Maps, chạm giữ vào vị trí vườn, cặp số hiện ra chính là vĩ độ, kinh độ.</p></div>`;
+}
+function saveWeatherLoc() {
+  const name = document.getElementById("wxName").value.trim();
+  const lat = parseFloat(document.getElementById("wxLat").value);
+  const lon = parseFloat(document.getElementById("wxLon").value);
+  if (isNaN(lat) || isNaN(lon)) { alert("Hãy nhập vĩ độ và kinh độ dạng số, ví dụ 12.6797 và 108.0447."); return; }
+  localStorage.setItem("tachi_weather_loc", JSON.stringify({ name, lat, lon }));
+  localStorage.removeItem("tachi_weather_cache");
+  renderWeatherBar(); render();
+}
+function geoWeatherLoc() {
+  if (!navigator.geolocation) { alert("Máy này không hỗ trợ định vị."); return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    document.getElementById("wxLat").value = p.coords.latitude.toFixed(5);
+    document.getElementById("wxLon").value = p.coords.longitude.toFixed(5);
+    alert("Đã lấy tọa độ của máy. Bấm Lưu vị trí để áp dụng.");
+  }, () => alert("Không lấy được vị trí. Hãy nhập tay tọa độ lấy từ Google Maps."));
+}
+function clearWeatherLoc() { localStorage.removeItem("tachi_weather_loc"); renderWeatherBar(); render(); }
+
+/* ===== Khởi động ===== */
+FarmDB.open().then(async () => {
+  if (!localStorage.getItem("farm_crops_seeded_v2")) {
+    const existing = await FarmDB.all("crops");
+    if (!existing.length) {
+      const preset = [
+        { name: "Hồ tiêu", group: "Cây lâu năm", unit: "trụ", notes: "" },
+        { name: "Cà phê", group: "Cây lâu năm", unit: "cây", notes: "" },
+        { name: "Vải thiều", group: "Cây lâu năm", unit: "cây", notes: "" },
+        { name: "Sầu riêng", group: "Cây lâu năm", unit: "cây", notes: "" },
+        { name: "Chuối", group: "Cây lâu năm", unit: "bụi", notes: "" },
+        { name: "Bắp (ngô)", group: "Cây ngắn ngày (hoa màu)", unit: "luống", notes: "" },
+        { name: "Khoai mì (sắn)", group: "Cây ngắn ngày (hoa màu)", unit: "luống", notes: "" },
+        { name: "Rau các loại", group: "Cây ngắn ngày (hoa màu)", unit: "luống", notes: "" }
+      ];
+      for (const c of preset) await FarmDB.put("crops", c);
+    }
+    localStorage.setItem("farm_crops_seeded_v2", "1");
+  }
+  if (!localStorage.getItem("farm_tasks_merged_v4")) {
+    const oldTasks = await FarmDB.all("tasks");
+    if (oldTasks.length) {
+      const allPlantings = await FarmDB.all("plantings");
+      for (const t of oldTasks) {
+        const pl = t.planting_id ? allPlantings.find(x => x.id === t.planting_id) : null;
+        await FarmDB.put("care_logs", { date: t.date || todayStr(), zone_id: pl ? pl.zone_id : "", planting_id: t.planting_id || "", activity: t.title || t.type || "Việc cần làm", materials: [], cost_amount: 0, notes: t.notes || "", status: t.status === "Đã xong" ? "Đã làm" : "Cần làm" });
+        await FarmDB.remove("tasks", t.id);
+      }
+    }
+    localStorage.setItem("farm_tasks_merged_v4", "1");
+  }
+  const badge = document.getElementById("appBadge");
+  if (badge) badge.textContent = APP_VERSION;
+  renderNav(); render(); setSyncStatus(); initWeather();
+  if (Cloud.ready()) syncNow(false);
+}).catch(() => {
+  $app.innerHTML = `<div class="empty">Trình duyệt không mở được kho dữ liệu offline (IndexedDB).<br>Hãy mở file này bằng Chrome hoặc Edge phiên bản mới, không dùng chế độ ẩn danh.</div>`;
+});
+</script>
+</body>
+</html>

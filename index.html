@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TACHI FARM v2.29 - Quản Lý Nông Trại</title>
+<title>TACHI FARM v2.30 - Quản Lý Nông Trại</title>
 <style>
   :root{
     --green:#1f7a3d; --green-dark:#145c2b; --green-light:#e8f5ec;
@@ -91,7 +91,7 @@
 <body>
 <header>
   <span class="brand"><button id="menuBtn" onclick="toggleNav()" aria-label="Mở menu điều hướng">☰</button><h1>🌱 TACHI FARM</h1></span>
-  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.29 (17/11/2026)</span></span>
+  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.30 (17/11/2026)</span></span>
 </header>
 <div id="weatherBar" style="display:none;background:#dff0e4;border-bottom:1px solid var(--border);padding:8px 14px;font-size:13.5px;color:var(--green-dark)"></div>
 <div class="layout">
@@ -306,7 +306,7 @@ const MODULES = {
 /* ===== Giao diện & điều hướng ===== */
 const cache = { zones: [], crops: [], plantings: [], seasons: [], tasks: [], inventory: [], finances: [], care_logs: [], periods: [], stock_ins: [], photos: [], special_trees: [], harvests: [], stock_checks: [], workers: [], work_logs: [], worker_payments: [], notes: [] };
 let currentView = "dashboard";
-const APP_VERSION = "v2.29 (17/11/2026)";
+const APP_VERSION = "v2.30 (17/11/2026)";
 let editing = null; // {store, id}
 
 const VIEWS = [
@@ -2653,12 +2653,17 @@ let pendingLabelPhotos = [];
 function geminiKey() { return (localStorage.getItem("tachi_ai_key") || "").trim(); }
 function aiCardHTML() {
   const k = geminiKey();
-  return `<div class="card"><h2>🤖 Đọc nhãn thuốc bằng AI (Gemini)</h2>
-    <p class="note">Dán khóa Gemini (lấy miễn phí ở Google AI Studio) vào đây để dùng nút "Đọc nhãn thuốc" trong form Thêm/Sửa vật tư ở Kho vật tư: chụp ảnh nhãn, AI tự điền tên, thành phần, dung lượng gói và công dụng vào form. Khóa chỉ lưu trên máy này, không đồng bộ sang máy khác, nên mỗi máy dán 1 lần. ${k ? "Đã lưu khóa trên máy này (đuôi ••••" + esc(k.slice(-4)) + ")." : "Chưa có khóa trên máy này."}</p><br>
+  const g = groqKey();
+  return `<div class="card"><h2>🤖 Đọc nhãn thuốc bằng AI (Gemini + Groq dự phòng)</h2>
+    <p class="note">Dán khóa Gemini (lấy miễn phí ở Google AI Studio) vào đây để dùng nút "Đọc nhãn thuốc" trong form Thêm/Sửa vật tư ở Kho vật tư: chụp ảnh nhãn, AI tự điền tên, thành phần, dung lượng gói và công dụng vào form. Khóa chỉ lưu trên máy này, không đồng bộ sang máy khác, nên mỗi máy dán 1 lần. ${k ? "Đã lưu khóa Gemini trên máy này (đuôi ••••" + esc(k.slice(-4)) + ")." : "Chưa có khóa Gemini trên máy này."}</p><br>
     <div class="field"><label>Khóa Gemini</label><input id="aiKey" type="password" placeholder="Dán khóa AI Studio vào đây" value=""></div>
-    <button class="btn" onclick="saveAiKey()">Lưu khóa</button>
-    ${k ? `<button class="btn danger" onclick="clearAiKey()">Xóa khóa</button>` : ""}
-    <p class="note" style="margin-top:8px">Chưa có khóa? Vào trang Google AI Studio (aistudio.google.com), chọn "Get API key" để tạo miễn phí. Khóa Gemini đã dùng cho việc khác (ví dụ TACHIS) dùng chung được.</p></div>`;
+    <button class="btn" onclick="saveAiKey()">Lưu khóa Gemini</button>
+    ${k ? `<button class="btn danger" onclick="clearAiKey()">Xóa khóa Gemini</button>` : ""}
+    <p class="note" style="margin-top:8px">Chưa có khóa? Vào trang Google AI Studio (aistudio.google.com), chọn "Get API key" để tạo miễn phí. Khóa Gemini đã dùng cho việc khác (ví dụ TACHIS) dùng chung được.</p>
+    <div class="field" style="margin-top:14px"><label>Khóa Groq (dự phòng, không bắt buộc)</label><input id="groqKey" type="password" placeholder="Dán khóa Groq vào đây" value=""></div>
+    <button class="btn secondary" onclick="saveGroqKey()">Lưu khóa Groq</button>
+    ${g ? `<button class="btn danger" onclick="clearGroqKey()">Xóa khóa Groq</button>` : ""}
+    <p class="note" style="margin-top:8px">${g ? "Đã lưu khóa Groq trên máy này (đuôi ••••" + esc(g.slice(-4)) + "). " : ""}Khi Gemini lỗi hoặc quá tải, app tự chuyển qua Groq để đọc nhãn và gợi ý tiếp, bạn không cần làm gì thêm. Khóa Groq lấy miễn phí ở groq.com (mục API Keys); khóa Groq đã dùng cho TACHIS dùng chung được.</p></div>`;
 }
 function saveAiKey() {
   const v = document.getElementById("aiKey").value.trim();
@@ -2668,6 +2673,15 @@ function saveAiKey() {
   render();
 }
 function clearAiKey() { if (!confirm("Xóa khóa Gemini trên máy này?")) return; localStorage.removeItem("tachi_ai_key"); render(); }
+function groqKey() { return (localStorage.getItem("tachi_groq_key") || "").trim(); }
+function saveGroqKey() {
+  const v = document.getElementById("groqKey").value.trim();
+  if (!v) { alert("Hãy dán khóa Groq vào ô trước đã."); return; }
+  localStorage.setItem("tachi_groq_key", v);
+  alert("Đã lưu khóa Groq trên máy này.");
+  render();
+}
+function clearGroqKey() { if (!confirm("Xóa khóa Groq trên máy này?")) return; localStorage.removeItem("tachi_groq_key"); render(); }
 const LABEL_PROMPT = `Bạn là trợ lý đọc nhãn sản phẩm nông nghiệp Việt Nam. Người dùng gửi một hoặc nhiều ảnh chụp các mặt khác nhau của CÙNG MỘT chai/gói thuốc bảo vệ thực vật hoặc phân bón (nhãn thường in vòng quanh thân chai nên mỗi ảnh chỉ thấy một phần). Hãy gộp thông tin đọc được từ TẤT CẢ các ảnh để trích xuất thông tin đầy đủ nhất về sản phẩm đó. Chỉ trả về DUY NHẤT một đối tượng JSON (không thêm chữ nào khác) theo mẫu:
 {"name": "", "category": "", "ingredients": "", "pack_qty": null, "pack_unit": "", "unit": "", "notes": ""}
 Quy tắc:
@@ -2717,6 +2731,62 @@ async function geminiCall(parts, temperature) {
   if (sawBusy) throw new Error("Tất cả các model AI đều đang bận hoặc hết lượt miễn phí tạm thời (Google quá tải). Bạn chờ 1-2 phút rồi bấm thử lại nhé.");
   throw new Error(lastErr || "Không gọi được AI lúc này. Hãy thử lại sau.");
 }
+/* Groq dự phòng (v2.30): API kiểu OpenAI, có model đọc được ảnh.
+   Khi Gemini lỗi tạm thời thì aiCall tự chuyển qua đây. */
+const GROQ_MODELS = ["meta-llama/llama-4-scout-17b-16e-instruct", "meta-llama/llama-4-maverick-17b-128e-instruct", "qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+async function groqCall(parts, temperature) {
+  const key = groqKey();
+  if (!key) throw new Error("Chưa nhập khóa Groq trên máy này. Hãy vào mục Dữ liệu để dán khóa Groq.");
+  const hasImage = parts.some(p => p.inline_data);
+  const content = parts.map(p => p.text ? { type: "text", text: p.text } : { type: "image_url", image_url: { url: "data:" + (p.inline_data.mime_type || "image/jpeg") + ";base64," + p.inline_data.data } });
+  let lastErr = "", sawBusy = false;
+  for (const model of GROQ_MODELS) {
+    if (hasImage && /qwen|gpt-oss/.test(model)) continue;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let res;
+      try {
+        res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+          body: JSON.stringify({ model, messages: [{ role: "user", content }], temperature })
+        });
+      } catch (e) { lastErr = "Không gọi được Groq, hãy kiểm tra mạng."; break; }
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Khóa Groq không đúng. Hãy kiểm tra lại khóa Groq ở mục Dữ liệu.");
+        if (res.status === 429 || res.status === 503) { sawBusy = true; lastErr = "Model Groq " + model + " đang bận (" + res.status + ")."; if (attempt === 0) { await aiSleep(3000); continue; } break; }
+        lastErr = "Model Groq " + model + " báo lỗi " + res.status + ".";
+        break;
+      }
+      const j = await res.json();
+      const txt = (((j.choices || [])[0] || {}).message || {}).content || "";
+      if (String(txt).trim()) return String(txt).trim();
+      lastErr = "Groq trả về nội dung rỗng.";
+      break;
+    }
+  }
+  if (sawBusy) throw new Error("Cả Gemini và Groq đều đang bận tạm thời. Bạn chờ 1-2 phút rồi bấm thử lại nhé.");
+  throw new Error(lastErr || "Không gọi được Groq lúc này.");
+}
+/* Cửa gọi AI chung: Gemini trước, lỗi tạm thời thì tự qua Groq dự phòng.
+   Khóa Gemini sai thì báo thẳng, không qua Groq (tránh khó hiểu). */
+async function aiCall(parts, temperature) {
+  if (geminiKey()) {
+    try { return await geminiCall(parts, temperature); }
+    catch (e) {
+      if (/Khóa Gemini không đúng|bị từ chối quyền/.test(e.message || "") || !groqKey()) throw e;
+    }
+  }
+  if (groqKey()) return await groqCall(parts, temperature);
+  throw new Error("Chưa nhập khóa AI trên máy này. Hãy vào mục Dữ liệu để dán khóa Gemini (hoặc khóa Groq dự phòng).");
+}
+function parseAiJson(text) {
+  const t = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  try { return JSON.parse(t); } catch (e) {
+    const a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
+    throw e;
+  }
+}
 async function readLabelWithGemini(dataUrls) {
   const list = (Array.isArray(dataUrls) ? dataUrls : [dataUrls]).filter(Boolean);
   const parts = [{ text: LABEL_PROMPT }];
@@ -2725,8 +2795,8 @@ async function readLabelWithGemini(dataUrls) {
     if (base64) parts.push({ inline_data: { mime_type: "image/jpeg", data: base64 } });
   }
   if (parts.length < 2) throw new Error("Ảnh không hợp lệ.");
-  const text = await geminiCall(parts, 0.1);
-  try { return JSON.parse(text); }
+  const text = await aiCall(parts, 0.1);
+  try { return parseAiJson(text); }
   catch { throw new Error("AI trả về nội dung không đọc được. Hãy chụp lại ảnh rõ hơn rồi thử lại."); }
 }
 function setFormVal(name, val) {
@@ -2904,9 +2974,9 @@ Quy tắc:
 - search_keywords: 3-5 từ khóa ngắn, thực tế, để nông dân gõ tìm mua trên Shopee hoặc hỏi cửa hàng vật tư (gồm cả từ khóa theo công thức, ví dụ "phân bón lá 10-33-20").
 - buying_tips: 1-2 câu lưu ý khi chọn hàng thay thế: cần so hàm lượng gì, tránh nhầm lẫn gì.
 - Không nêu giá tiền.`;
-  const text = await geminiCall([{ text: prompt }], 0.2);
+  const text = await aiCall([{ text: prompt }], 0.2);
   let obj;
-  try { obj = JSON.parse(text); } catch (e) { throw new Error("AI trả về định dạng lạ, hãy bấm thử lại."); }
+  try { obj = parseAiJson(text); } catch (e) { throw new Error("AI trả về định dạng lạ, hãy bấm thử lại."); }
   const clean = (arr, fields) => (Array.isArray(arr) ? arr : []).filter(x => x && typeof x === "object" && fields.some(f => x[f])).slice(0, 5);
   return {
     suggestions: clean(obj.suggestions, ["name"]),

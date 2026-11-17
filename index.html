@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TACHI FARM v2.26 - Quản Lý Nông Trại</title>
+<title>TACHI FARM v2.27 - Quản Lý Nông Trại</title>
 <style>
   :root{
     --green:#1f7a3d; --green-dark:#145c2b; --green-light:#e8f5ec;
@@ -91,7 +91,7 @@
 <body>
 <header>
   <span class="brand"><button id="menuBtn" onclick="toggleNav()" aria-label="Mở menu điều hướng">☰</button><h1>🌱 TACHI FARM</h1></span>
-  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.26 (17/11/2026)</span></span>
+  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.27 (17/11/2026)</span></span>
 </header>
 <div id="weatherBar" style="display:none;background:#dff0e4;border-bottom:1px solid var(--border);padding:8px 14px;font-size:13.5px;color:var(--green-dark)"></div>
 <div class="layout">
@@ -107,6 +107,16 @@
     <div class="row">
       <button class="btn secondary" id="btnCancel" type="button">Hủy</button>
       <button class="btn" id="btnSave" type="button">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="similarOverlay" style="z-index:60">
+  <div class="modal">
+    <h3 id="similarTitle">🔍 Sản phẩm tương tự</h3>
+    <div id="similarBody"></div>
+    <div class="row">
+      <button class="btn secondary" type="button" onclick="closeSimilar()">Đóng</button>
     </div>
   </div>
 </div>
@@ -296,7 +306,7 @@ const MODULES = {
 /* ===== Giao diện & điều hướng ===== */
 const cache = { zones: [], crops: [], plantings: [], seasons: [], tasks: [], inventory: [], finances: [], care_logs: [], periods: [], stock_ins: [], photos: [], special_trees: [], harvests: [], stock_checks: [], workers: [], work_logs: [], worker_payments: [], notes: [] };
 let currentView = "dashboard";
-const APP_VERSION = "v2.26 (17/11/2026)";
+const APP_VERSION = "v2.27 (17/11/2026)";
 let editing = null; // {store, id}
 
 const VIEWS = [
@@ -938,6 +948,7 @@ function renderInventory() {
       ${r.retired ? "" : `<button class="btn small" onclick="openStockIn('${r.id}')">Nhập kho</button>
       <button class="btn small secondary" onclick="openDepreForm('${r.id}')">Khấu hao</button>`}
       <button class="btn small secondary" onclick="openForm('inventory','${r.id}')">Sửa</button>
+      <button class="btn small secondary" onclick="showSimilarProducts('${r.id}')">🔍 Tương tự</button>
       <button class="btn small danger" onclick="removeItem('inventory','${r.id}')">Xóa</button>
     </div></td></tr>`;
   }).join("")
@@ -1494,6 +1505,7 @@ function openForm(store, id) {
       <label>📷 Đọc nhãn thuốc / phân bón bằng AI</label>
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
         <button type="button" class="btn small" onclick="document.getElementById('labelFile').click()">Chụp / chọn ảnh nhãn (được chọn nhiều ảnh)</button>
+        <button type="button" class="btn small secondary" onclick="similarFromForm()">🔍 Tìm loại tương tự</button>
         <span class="note">AI tự điền tên, thành phần, dung lượng gói và công dụng vào form. Cần khóa Gemini (nhập ở mục Dữ liệu) và có mạng. Mẹo: chai/hũ tròn thì chụp 2-3 ảnh xoay quanh thân chai (mặt trước, mặt ghi thành phần, mặt sau) rồi chọn tất cả cùng một lúc, AI sẽ gộp thông tin các mặt lại.</span>
       </div>
       <input id="labelFile" type="file" accept="image/*" multiple style="display:none" onchange="handleLabelFile(this)">
@@ -2752,6 +2764,145 @@ async function attachPendingLabelPhoto(item) {
   for (const dataUrl of list) {
     await FarmDB.put("photos", { link_type: "inventory", link_id: item.id, date: todayStr(), tag: "Nhãn sản phẩm", note: "Ảnh nhãn đọc bằng AI (Gemini)", image: dataUrl });
   }
+}
+
+/* ---------- Tìm sản phẩm tương tự theo thành phần (v2.27) ----------
+   Lớp 1: so trong Kho nội bộ bằng cách tách các chất + hàm lượng khỏi
+   ô Thành phần (chữ tự do) rồi chấm điểm giống nhau.
+   Lớp 2: hỏi Gemini gợi ý sản phẩm ngoài thị trường (tham khảo). */
+const COMP_KEYS = { n: "N", dam: "N", p2o5: "P2O5", lan: "P2O5", k2o: "K2O", kali: "K2O", ca: "Ca", canxi: "Ca", cao: "CaO", mg: "Mg", magie: "Mg", mgo: "MgO", s: "S", b: "B", bo: "B", zn: "Zn", kem: "Zn", fe: "Fe", sat: "Fe", cu: "Cu", dong: "Cu", mn: "Mn", mangan: "Mn", mo: "Mo", si: "Si", sio2: "SiO2", naa: "NAA", ga3: "GA3" };
+const COMP_MICROS = ["Ca", "CaO", "Mg", "MgO", "S", "B", "Zn", "Fe", "Cu", "Mn", "Mo", "Si", "SiO2"];
+function compWeight(k) {
+  if (k === "N" || k === "P2O5" || k === "K2O") return 3;
+  if (COMP_MICROS.includes(k)) return 1.5;
+  return 2.5;
+}
+function parseComponents(text) {
+  const out = {};
+  if (!text) return out;
+  const raw = String(text).replace(/₂/g, "2").replace(/₅/g, "5");
+  const norm = searchKey(raw);
+  const put = (key, num, unit) => {
+    if (!key || !(num > 0) || (key in out)) return;
+    let pct = num;
+    if (unit === "ppm" || unit === "mg/kg") pct = num / 10000;
+    else if (unit === "g/kg") pct = num / 10;
+    out[key] = { pct, disp: fmtNumInput(num) + (unit === "%" ? "%" : unit === "ppm" ? "ppm" : unit ? " " + unit : "") };
+  };
+  const dash = norm.match(/(\d+(?:[.,]\d+)?)\s*-\s*(\d+(?:[.,]\d+)?)\s*-\s*(\d+(?:[.,]\d+)?)/);
+  if (dash) { put("N", parseFloat(dash[1].replace(",", ".")), "%"); put("P2O5", parseFloat(dash[2].replace(",", ".")), "%"); put("K2O", parseFloat(dash[3].replace(",", ".")), "%"); }
+  const re = /([a-z][a-z0-9]*)\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*(%|ppm|mg\/kg|g\/l|g\/kg)?/g;
+  let m;
+  while ((m = re.exec(norm))) {
+    const key = COMP_KEYS[m[1]];
+    if (key) put(key, parseFloat(m[2].replace(",", ".")), m[3] || "%");
+  }
+  const reB = /([A-Z][a-z]{3,}(?:\s[A-Z][a-z]+)?)\s+(\d+(?:[.,]\d+)?)\s*(%|ppm|g\/l)/g;
+  while ((m = reB.exec(raw))) put(m[1].trim(), parseFloat(m[2].replace(",", ".")), m[3]);
+  return out;
+}
+function similarityScore(a, b) {
+  let num = 0, den = 0, shared = 0;
+  for (const k of Object.keys(a)) {
+    const w = compWeight(k); den += w;
+    if (k in b) { shared++; const d = Math.abs(a[k].pct - b[k].pct) / Math.max(a[k].pct, b[k].pct, 1e-9); num += w * (1 - Math.min(1, d)); }
+  }
+  return { score: den ? num / den : 0, shared };
+}
+let similarSource = null;
+function closeSimilar() { document.getElementById("similarOverlay").classList.remove("open"); }
+function similarFromForm() {
+  const form = document.getElementById("modalForm");
+  const get = n => { const el = form.querySelector('[name="' + n + '"]'); return el ? el.value.trim() : ""; };
+  showSimilarProducts(null, { name: get("name") || "(chưa đặt tên)", category: get("category"), ingredients: get("ingredients"), notes: get("notes") });
+}
+function showSimilarProducts(itemId, srcOverride) {
+  const src = srcOverride || cache.inventory.find(i => i.id === itemId);
+  if (!src) return;
+  similarSource = { name: src.name || "", category: src.category || "", ingredients: src.ingredients || "", notes: src.notes || "", id: itemId || null };
+  const srcMap = parseComponents(similarSource.ingredients);
+  const srcKeys = Object.keys(srcMap);
+  let layer1 = "";
+  if (!srcKeys.length) {
+    layer1 = `<p class="note">Sản phẩm này chưa có dữ liệu thành phần để so sánh. Hãy mở Sửa vật tư và dùng nút đọc nhãn AI (hoặc gõ tay vào ô Thành phần, VD: "N: 10%, P2O5: 33%, K2O: 20%") rồi thử lại.</p>`;
+  } else {
+    const scored = [];
+    for (const it of cache.inventory) {
+      if (similarSource.id && it.id === similarSource.id) continue;
+      const cm = parseComponents(it.ingredients);
+      if (!Object.keys(cm).length) continue;
+      const r = similarityScore(srcMap, cm);
+      if (r.shared >= 1 && r.score >= 0.4) scored.push({ it, cm, score: r.score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    const top = scored.slice(0, 5);
+    layer1 = top.length ? top.map(({ it, cm, score }) => {
+      const rows = srcKeys.filter(k => k in cm).map(k => `<tr><td>${esc(k)}</td><td>${esc(srcMap[k].disp)}</td><td>${esc(cm[k].disp)}</td></tr>`).join("");
+      return `<div style="border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px">
+        <b>${esc(it.name)}</b> <span class="tag" style="background:var(--green); color:#fff">Giống ${Math.round(score * 100)}%</span>
+        <br><span class="note">Tồn: ${it.quantity} ${esc(it.unit || "")}${it.unit_price ? " - đơn giá " + Number(it.unit_price).toLocaleString("vi-VN") + " đ" : ""}</span>
+        <div class="table-wrap" style="margin-top:6px"><table><tr><th>Chất</th><th>Sản phẩm gốc</th><th>Sản phẩm này</th></tr>${rows}</table></div></div>`;
+    }).join("") : `<p class="note">Chưa có vật tư nào khác trong Kho có thành phần gần giống. (Chỉ so được với vật tư đã có ô Thành phần - đọc nhãn bằng AI sẽ tự điền ô này.)</p>`;
+  }
+  document.getElementById("similarTitle").textContent = "🔍 Sản phẩm tương tự";
+  document.getElementById("similarBody").innerHTML = `
+    <div style="background:#eef6ee; border-radius:10px; padding:10px">
+      <b>${esc(similarSource.name)}</b>${similarSource.category ? ' <span class="note">(' + esc(similarSource.category) + ')</span>' : ""}
+      ${similarSource.ingredients ? `<br><span class="note">Thành phần: ${esc(similarSource.ingredients)}</span>` : ""}
+    </div>
+    <h4 style="margin:14px 0 4px">📦 Trong Kho của bạn</h4>
+    ${layer1}
+    <h4 style="margin:16px 0 4px">🌐 Ngoài thị trường (AI gợi ý)</h4>
+    <button type="button" class="btn small" onclick="askSimilarAI()">🤖 Hỏi AI gợi ý sản phẩm tương tự</button>
+    <div id="similarAiResult" style="margin-top:8px"></div>`;
+  document.getElementById("similarOverlay").classList.add("open");
+}
+async function askSimilarAI() {
+  const box = document.getElementById("similarAiResult");
+  if (!box || !similarSource) return;
+  box.innerHTML = '<p class="note">Đang hỏi AI, chờ vài giây...</p>';
+  try {
+    const list = await askGeminiSimilar(similarSource);
+    if (!list.length) { box.innerHTML = '<p class="note">AI chưa tìm được sản phẩm tương tự đáng tin cậy cho thành phần này.</p>'; return; }
+    box.innerHTML = '<p class="note" style="color:var(--danger)">⚠️ Gợi ý tham khảo từ AI, có thể chưa chính xác - hãy kiểm chứng thành phần trên nhãn thật hoặc hỏi nhà bán trước khi mua.</p>' + list.map(s => `<div style="border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px"><b>${esc(s.name || "")}</b>${s.maker ? ' <span class="note">(' + esc(s.maker) + ')</span>' : ""}${s.composition ? `<br><span class="note">Thành phần: ${esc(s.composition)}</span>` : ""}${s.difference ? `<br><span class="note">Khác biệt so với sản phẩm gốc: ${esc(s.difference)}</span>` : ""}</div>`).join("");
+  } catch (e) { box.innerHTML = '<p class="note" style="color:var(--danger)">Không hỏi được AI: ' + esc((e && e.message) || String(e)) + '</p>'; }
+}
+async function askGeminiSimilar(src) {
+  const key = geminiKey();
+  if (!key) throw new Error("Chưa nhập khóa Gemini trên máy này. Hãy vào mục Dữ liệu, thẻ \"Đọc nhãn thuốc bằng AI\" để dán khóa trước.");
+  const prompt = `Bạn là chuyên gia vật tư nông nghiệp Việt Nam. Sản phẩm gốc:
+- Tên: ${src.name || ""}
+- Nhóm: ${src.category || ""}
+- Thành phần: ${src.ingredients || ""}
+- Công dụng / ghi chú: ${src.notes || ""}
+Hãy gợi ý tối đa 5 sản phẩm THẬT, đang được bán phổ biến tại Việt Nam, có thành phần hoặc hoạt chất tương tự sản phẩm gốc (với phân bón: tỷ lệ N - P2O5 - K2O và các vi lượng gần giống; với thuốc bảo vệ thực vật: cùng hoạt chất và nồng độ gần bằng). Chỉ đưa sản phẩm bạn chắc chắn có thật; không chắc thì bỏ qua, thà ít còn hơn bịa. Không nêu giá tiền. Chỉ trả về DUY NHẤT một đối tượng JSON (không thêm chữ nào khác) theo mẫu:
+{"suggestions":[{"name":"tên sản phẩm","maker":"hãng hoặc nhà sản xuất nếu biết, không biết thì để trống","composition":"thành phần chính kèm hàm lượng","difference":"điểm khác biệt chính so với sản phẩm gốc, 1 câu ngắn"}]}`;
+  let lastErr = "";
+  for (const model of GEMINI_MODELS) {
+    let res;
+    try {
+      res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } })
+      });
+    } catch (e) { lastErr = "Không gọi được Gemini, hãy kiểm tra mạng."; continue; }
+    if (!res.ok) {
+      let msg = ""; try { const j = await res.json(); msg = (j.error && j.error.message) || ""; if (j.error && j.error.status === "API_KEY_INVALID") throw new Error("Khóa Gemini không đúng. Hãy kiểm tra lại khóa ở mục Dữ liệu."); } catch (e) { if (e.message && e.message.includes("Khóa Gemini")) throw e; }
+      if (res.status === 403) throw new Error("Gemini từ chối khóa này (403). Hãy kiểm tra lại khóa ở mục Dữ liệu.");
+      lastErr = "Model " + model + " đang bận hoặc hết lượt miễn phí (" + res.status + "). " + msg;
+      continue;
+    }
+    const data = await res.json();
+    const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+    const text = parts.map(p => p.text || "").join("");
+    try {
+      const obj = JSON.parse(text);
+      const arr = Array.isArray(obj.suggestions) ? obj.suggestions : [];
+      return arr.filter(s => s && s.name).slice(0, 5);
+    } catch (e) { lastErr = "AI trả về định dạng lạ, hãy thử lại."; continue; }
+  }
+  throw new Error(lastErr || "Không hỏi được AI lúc này, hãy thử lại sau.");
 }
 
 /* ===== Thời tiết ở dải ngang (Open-Meteo, miễn phí, không cần khóa) ===== */

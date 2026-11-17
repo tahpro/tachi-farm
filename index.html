@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TACHI FARM v2.24 - Quản Lý Nông Trại</title>
+<title>TACHI FARM v2.25 - Quản Lý Nông Trại</title>
 <style>
   :root{
     --green:#1f7a3d; --green-dark:#145c2b; --green-light:#e8f5ec;
@@ -91,7 +91,7 @@
 <body>
 <header>
   <span class="brand"><button id="menuBtn" onclick="toggleNav()" aria-label="Mở menu điều hướng">☰</button><h1>🌱 TACHI FARM</h1></span>
-  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.24 (17/11/2026)</span></span>
+  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.25 (17/11/2026)</span></span>
 </header>
 <div id="weatherBar" style="display:none;background:#dff0e4;border-bottom:1px solid var(--border);padding:8px 14px;font-size:13.5px;color:var(--green-dark)"></div>
 <div class="layout">
@@ -296,7 +296,7 @@ const MODULES = {
 /* ===== Giao diện & điều hướng ===== */
 const cache = { zones: [], crops: [], plantings: [], seasons: [], tasks: [], inventory: [], finances: [], care_logs: [], periods: [], stock_ins: [], photos: [], special_trees: [], harvests: [], stock_checks: [], workers: [], work_logs: [], worker_payments: [], notes: [] };
 let currentView = "dashboard";
-const APP_VERSION = "v2.24 (17/11/2026)";
+const APP_VERSION = "v2.25 (17/11/2026)";
 let editing = null; // {store, id}
 
 const VIEWS = [
@@ -1336,6 +1336,7 @@ function renderData() {
       <br><br>${photoStatsHTML()}
     </div>
     ${cloudCardHTML()}
+    ${aiCardHTML()}
     ${weatherCardHTML()}
     <div class="card"><h2>Dữ liệu mẫu</h2>
       <p class="note">Muốn xem thử giao diện có dữ liệu trông thế nào? Thêm bộ dữ liệu mẫu tổng hợp (trồng trọt + chăn nuôi), không thích thì xóa tay từng mục hoặc nhập backup trống đè lên.</p><br>
@@ -1487,9 +1488,21 @@ function openForm(store, id) {
     if (!id && f.type === "date" && !val) val = todayStr();
     return `<div class="field"><label>${f.label}${f.required ? " *" : ""}</label>${fieldInput(f, val)}</div>`;
   }).join("");
+  if (store === "inventory") {
+    pendingLabelPhoto = null;
+    document.getElementById("modalForm").insertAdjacentHTML("afterbegin", `<div class="field" style="background:#eef6ee; border:1px dashed var(--border); border-radius:10px; padding:10px">
+      <label>📷 Đọc nhãn thuốc / phân bón bằng AI</label>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+        <button type="button" class="btn small" onclick="document.getElementById('labelFile').click()">Chụp / chọn ảnh nhãn</button>
+        <span class="note">AI tự điền tên, thành phần, dung lượng gói và công dụng vào form. Cần khóa Gemini (nhập ở mục Dữ liệu) và có mạng.</span>
+      </div>
+      <input id="labelFile" type="file" accept="image/*" style="display:none" onchange="handleLabelFile(this)">
+      <p class="note" id="labelAiStatus" style="margin:6px 0 0"></p>
+    </div>`);
+  }
   overlay.classList.add("open");
 }
-function closeForm() { overlay.classList.remove("open"); editing = null; }
+function closeForm() { overlay.classList.remove("open"); editing = null; pendingLabelPhoto = null; }
 document.getElementById("btnCancel").onclick = closeForm;
 overlay.addEventListener("click", e => { if (e.target === overlay) closeForm(); });
 document.getElementById("btnSave").onclick = async () => {
@@ -1518,7 +1531,8 @@ document.getElementById("btnSave").onclick = async () => {
     } else data[k] = v;
   });
   if (invalidNum) { alert("Ô \"" + invalidNum + "\" chưa đúng định dạng số. Hãy nhập kiểu 45000 hoặc 45.000 (nghĩa là bốn mươi lăm nghìn)."); return; }
-  await FarmDB.put(editing.store, data);
+  const savedRec = await FarmDB.put(editing.store, data);
+  if (editing.store === "inventory") await attachPendingLabelPhoto(savedRec);
   closeForm(); render();
 };
 async function removeItem(store, id) {
@@ -2620,6 +2634,117 @@ async function cloudRegister() {
   } catch (e) { alert("Đăng ký thất bại: " + e.message); }
 }
 function cloudLogout() { Cloud.signOut(); render(); }
+
+/* ===== Đọc nhãn thuốc / phân bón bằng AI Gemini (v2.25) ===== */
+const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
+let pendingLabelPhoto = null;
+function geminiKey() { return (localStorage.getItem("tachi_ai_key") || "").trim(); }
+function aiCardHTML() {
+  const k = geminiKey();
+  return `<div class="card"><h2>🤖 Đọc nhãn thuốc bằng AI (Gemini)</h2>
+    <p class="note">Dán khóa Gemini (lấy miễn phí ở Google AI Studio) vào đây để dùng nút "Đọc nhãn thuốc" trong form Thêm/Sửa vật tư ở Kho vật tư: chụp ảnh nhãn, AI tự điền tên, thành phần, dung lượng gói và công dụng vào form. Khóa chỉ lưu trên máy này, không đồng bộ sang máy khác, nên mỗi máy dán 1 lần. ${k ? "Đã lưu khóa trên máy này (đuôi ••••" + esc(k.slice(-4)) + ")." : "Chưa có khóa trên máy này."}</p><br>
+    <div class="field"><label>Khóa Gemini</label><input id="aiKey" type="password" placeholder="Dán khóa AI Studio vào đây" value=""></div>
+    <button class="btn" onclick="saveAiKey()">Lưu khóa</button>
+    ${k ? `<button class="btn danger" onclick="clearAiKey()">Xóa khóa</button>` : ""}
+    <p class="note" style="margin-top:8px">Chưa có khóa? Vào trang Google AI Studio (aistudio.google.com), chọn "Get API key" để tạo miễn phí. Khóa Gemini đã dùng cho việc khác (ví dụ TACHIS) dùng chung được.</p></div>`;
+}
+function saveAiKey() {
+  const v = document.getElementById("aiKey").value.trim();
+  if (!v) { alert("Hãy dán khóa Gemini vào ô trước đã."); return; }
+  localStorage.setItem("tachi_ai_key", v);
+  alert("Đã lưu khóa Gemini trên máy này.");
+  render();
+}
+function clearAiKey() { if (!confirm("Xóa khóa Gemini trên máy này?")) return; localStorage.removeItem("tachi_ai_key"); render(); }
+const LABEL_PROMPT = `Bạn là trợ lý đọc nhãn sản phẩm nông nghiệp Việt Nam. Hãy nhìn ảnh nhãn chai/gói thuốc bảo vệ thực vật hoặc phân bón và trích xuất thông tin. Chỉ trả về DUY NHẤT một đối tượng JSON (không thêm chữ nào khác) theo mẫu:
+{"name": "", "category": "", "ingredients": "", "pack_qty": null, "pack_unit": "", "unit": "", "notes": ""}
+Quy tắc:
+- name: tên sản phẩm đúng như trên nhãn.
+- category: một trong các giá trị: "Thuốc", "Phân bón", "Giống", "Dụng cụ", "Thức ăn", "Khác".
+- ingredients: hoạt chất/thành phần và nồng độ, ví dụ "Abamectin 3.6% EC" hoặc "NPK 20-20-15". Không thấy thì để "".
+- pack_qty và pack_unit: dung lượng/trọng lượng của 1 chai/gói/bao theo nhãn, ví dụ chai 500 ml thì pack_qty 500, pack_unit "ml"; gói 100 g thì 100, "g"; bao 25 kg thì 25, "kg"; chai 1 lít thì 1, "lít". pack_unit chỉ dùng một trong: "kg", "g", "lít", "ml". Không thấy thì pack_qty null, pack_unit "".
+- unit: đơn vị đựng của sản phẩm, ví dụ "chai", "gói", "bao", "lít", "kg". Không rõ thì "".
+- notes: tóm tắt công dụng chính và liều lượng/cách pha nếu nhãn có ghi, tối đa khoảng 300 ký tự, tiếng Việt. Không có thì "".
+- Tuyệt đối không bịa thông tin không có trên nhãn; trường nào không đọc được thì để trống hoặc null như quy tắc trên.`;
+async function readLabelWithGemini(dataUrl) {
+  const key = geminiKey();
+  if (!key) throw new Error("Chưa nhập khóa Gemini trên máy này. Hãy vào mục Dữ liệu, thẻ \"Đọc nhãn thuốc bằng AI\" để dán khóa trước.");
+  const base64 = String(dataUrl).split(",")[1] || "";
+  if (!base64) throw new Error("Ảnh không hợp lệ.");
+  let lastErr = "";
+  for (const model of GEMINI_MODELS) {
+    let res;
+    try {
+      res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: LABEL_PROMPT }, { inline_data: { mime_type: "image/jpeg", data: base64 } }] }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+        })
+      });
+    } catch (e) { lastErr = "Không gọi được Gemini, hãy kiểm tra mạng."; continue; }
+    if (res.status === 429 || res.status === 503 || res.status === 404) { lastErr = "Model " + model + " đang bận hoặc đã hết lượt miễn phí hôm nay (" + res.status + ")."; continue; }
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      if (t.includes("API_KEY_INVALID")) throw new Error("Khóa Gemini không đúng. Hãy kiểm tra lại khóa ở mục Dữ liệu.");
+      if (res.status === 403) throw new Error("Khóa Gemini bị từ chối quyền (403). Hãy kiểm tra lại khóa ở mục Dữ liệu.");
+      throw new Error("Gemini báo lỗi " + res.status + ". " + t.slice(0, 150));
+    }
+    const j = await res.json();
+    const cand = (j.candidates || [])[0] || {};
+    const text = ((cand.content || {}).parts || []).map(p => p.text || "").join("").trim();
+    try { return JSON.parse(text); }
+    catch { throw new Error("AI trả về nội dung không đọc được. Hãy chụp lại ảnh rõ hơn rồi thử lại."); }
+  }
+  throw new Error("Không đọc được nhãn lúc này. " + lastErr + " Hãy thử lại sau.");
+}
+function setFormVal(name, val) {
+  if (val === "" || val === null || val === undefined) return;
+  const el = document.querySelector(`#modalForm [name="${name}"]`);
+  if (el) el.value = val;
+}
+function applyLabelResult(obj) {
+  if (!obj) return;
+  setFormVal("name", obj.name);
+  if (obj.category) {
+    const sel = document.querySelector(`#modalForm [name="category"]`);
+    if (sel && [...sel.options].some(o => o.value === obj.category)) sel.value = obj.category;
+  }
+  setFormVal("ingredients", obj.ingredients);
+  if (obj.pack_qty !== null && obj.pack_qty !== undefined && obj.pack_qty !== "") setFormVal("pack_qty", obj.pack_qty);
+  if (obj.pack_unit) {
+    const sel = document.querySelector(`#modalForm [name="pack_unit"]`);
+    if (sel && [...sel.options].some(o => o.value === obj.pack_unit)) sel.value = obj.pack_unit;
+  }
+  setFormVal("unit", obj.unit);
+  if (obj.notes) {
+    const ta = document.querySelector(`#modalForm [name="notes"]`);
+    if (ta) ta.value = ta.value.trim() ? ta.value.trim() + "\n" + obj.notes : obj.notes;
+  }
+}
+async function handleLabelFile(input) {
+  const f = input.files && input.files[0];
+  input.value = "";
+  if (!f) return;
+  const st = document.getElementById("labelAiStatus");
+  const setStatus = t => { if (st) st.textContent = t; };
+  try {
+    setStatus("Đang xử lý ảnh...");
+    const dataUrl = await compressImageFile(f);
+    pendingLabelPhoto = dataUrl;
+    setStatus("Đang gửi ảnh cho AI đọc nhãn, chờ vài giây...");
+    const obj = await readLabelWithGemini(dataUrl);
+    applyLabelResult(obj);
+    setStatus("Đã đọc xong và điền vào form bên dưới. Bạn kiểm tra lại cho đúng rồi bấm Lưu - ảnh nhãn sẽ tự gắn vào hồ sơ vật tư khi lưu.");
+  } catch (e) { setStatus("Không đọc được: " + (e.message || e)); }
+}
+async function attachPendingLabelPhoto(item) {
+  const dataUrl = pendingLabelPhoto;
+  pendingLabelPhoto = null;
+  if (!dataUrl || !item || !item.id) return;
+  await FarmDB.put("photos", { link_type: "inventory", link_id: item.id, date: todayStr(), tag: "Nhãn sản phẩm", note: "Ảnh nhãn đọc bằng AI (Gemini)", image: dataUrl });
+}
 
 /* ===== Thời tiết ở dải ngang (Open-Meteo, miễn phí, không cần khóa) ===== */
 function weatherLoc() { try { return JSON.parse(localStorage.getItem("tachi_weather_loc") || "null"); } catch { return null; } }

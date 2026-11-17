@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TACHI FARM v2.23 - Quản Lý Nông Trại</title>
+<title>TACHI FARM v2.24 - Quản Lý Nông Trại</title>
 <style>
   :root{
     --green:#1f7a3d; --green-dark:#145c2b; --green-light:#e8f5ec;
@@ -91,7 +91,7 @@
 <body>
 <header>
   <span class="brand"><button id="menuBtn" onclick="toggleNav()" aria-label="Mở menu điều hướng">☰</button><h1>🌱 TACHI FARM</h1></span>
-  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.23 (14/11/2026)</span></span>
+  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.24 (17/11/2026)</span></span>
 </header>
 <div id="weatherBar" style="display:none;background:#dff0e4;border-bottom:1px solid var(--border);padding:8px 14px;font-size:13.5px;color:var(--green-dark)"></div>
 <div class="layout">
@@ -124,8 +124,8 @@
      giao diện không phải viết lại.
    ========================================================= */
 const DB_NAME = "farm_app_db";
-const DB_VERSION = 8;
-const STORES = ["zones", "crops", "plantings", "seasons", "tasks", "inventory", "finances", "care_logs", "periods", "stock_ins", "photos", "special_trees", "harvests", "stock_checks", "workers", "work_logs", "worker_payments"];
+const DB_VERSION = 9;
+const STORES = ["zones", "crops", "plantings", "seasons", "tasks", "inventory", "finances", "care_logs", "periods", "stock_ins", "photos", "special_trees", "harvests", "stock_checks", "workers", "work_logs", "worker_payments", "notes"];
 
 const FarmDB = {
   db: null,
@@ -294,9 +294,9 @@ const MODULES = {
 <script>
 "use strict";
 /* ===== Giao diện & điều hướng ===== */
-const cache = { zones: [], crops: [], plantings: [], seasons: [], tasks: [], inventory: [], finances: [], care_logs: [], periods: [], stock_ins: [], photos: [], special_trees: [], harvests: [], stock_checks: [], workers: [], work_logs: [], worker_payments: [] };
+const cache = { zones: [], crops: [], plantings: [], seasons: [], tasks: [], inventory: [], finances: [], care_logs: [], periods: [], stock_ins: [], photos: [], special_trees: [], harvests: [], stock_checks: [], workers: [], work_logs: [], worker_payments: [], notes: [] };
 let currentView = "dashboard";
-const APP_VERSION = "v2.23 (14/11/2026)";
+const APP_VERSION = "v2.24 (17/11/2026)";
 let editing = null; // {store, id}
 
 const VIEWS = [
@@ -308,6 +308,7 @@ const VIEWS = [
   { id: "inventory", title: "Kho vật tư", icon: "📦" },
   { id: "workers", title: "Nhân sự", icon: "👷" },
   { id: "finances", title: "Thu chi", icon: "💰" },
+  { id: "notes", title: "Ghi chú", icon: "📝" },
   { id: "data", title: "Dữ liệu", icon: "💾" }
 ];
 const $app = document.getElementById("app");
@@ -365,7 +366,7 @@ function toggleNav() { document.body.classList.toggle("nav-open"); }
 function closeNav() { document.body.classList.remove("nav-open"); }
 
 async function reload() { for (const s of STORES) cache[s] = await FarmDB.all(s); }
-async function render() { await reload(); if (currentView === "dashboard") renderDashboard(); else if (currentView === "data") renderData(); else if (currentView === "garden") renderGarden(); else if (currentView === "care") renderCare(); else if (currentView === "finances") renderFinances(); else if (currentView === "inventory") renderInventory(); else if (currentView === "workers") renderWorkers(); else if (currentView === "special") renderSpecial(); else if (currentView === "harvests") { currentView = "finances"; renderNav(); renderFinances(); } else if (currentView === "special_detail") renderSpecialDetail(); else if (currentView === "photos") renderPhotos(); else renderList(currentView); }
+async function render() { await reload(); if (currentView === "dashboard") renderDashboard(); else if (currentView === "data") renderData(); else if (currentView === "garden") renderGarden(); else if (currentView === "care") renderCare(); else if (currentView === "finances") renderFinances(); else if (currentView === "inventory") renderInventory(); else if (currentView === "workers") renderWorkers(); else if (currentView === "notes") renderNotes(); else if (currentView === "special") renderSpecial(); else if (currentView === "harvests") { currentView = "finances"; renderNav(); renderFinances(); } else if (currentView === "special_detail") renderSpecialDetail(); else if (currentView === "photos") renderPhotos(); else renderList(currentView); }
 
 function renderDashboard() {
   const now = new Date(); const ym = now.toISOString().slice(0, 7);
@@ -1223,6 +1224,105 @@ async function deleteStockIn(id) {
   for (const f of cache.finances.filter(f => f.stock_in_id === id)) await FarmDB.remove("finances", f.id);
   await FarmDB.remove("stock_ins", id);
   render();
+}
+
+/* ===== Ghi chú tự do (v2.24): sổ tay ghi nhanh, đồng bộ như mọi dữ liệu khác ===== */
+let noteEditingId = null;
+let noteFormOpen = false;
+let noteQuery = "";
+const noteExpanded = new Set();
+function fmtDateTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const p = n => String(n).padStart(2, "0");
+  return p(d.getHours()) + ":" + p(d.getMinutes()) + " " + p(d.getDate()) + "/" + p(d.getMonth() + 1) + "/" + d.getFullYear();
+}
+function noteTitle(n) {
+  if (n && n.title && n.title.trim()) return n.title.trim();
+  const first = String((n && n.content) || "").split("\n").map(s => s.trim()).find(s => s);
+  return first ? (first.length > 70 ? first.slice(0, 70) + "…" : first) : "(Ghi chú trống)";
+}
+function notesListHTML() {
+  const q = searchKey(noteQuery);
+  const rows = [...cache.notes]
+    .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")))
+    .filter(n => !q || searchKey((n.title || "") + " " + (n.content || "")).includes(q));
+  if (!cache.notes.length) return `<div class="card"><p class="note">Chưa có ghi chú nào. Bấm "+ Thêm ghi chú" để viết ghi chú đầu tiên.</p></div>`;
+  if (!rows.length) return `<div class="card"><p class="note">Không tìm thấy ghi chú nào khớp với từ khóa.</p></div>`;
+  return rows.map(n => {
+    const full = String(n.content || "");
+    const expanded = noteExpanded.has(n.id);
+    const body = expanded || full.length <= 400 ? full : full.slice(0, 400) + "…";
+    return `<div class="card">
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:baseline">
+        <b style="font-size:16px">${esc(noteTitle(n))}</b>
+        <span class="note" style="white-space:nowrap">${fmtDateTime(n.updated_at)}</span>
+      </div>
+      ${body ? `<div style="white-space:pre-wrap; margin-top:6px">${esc(body)}</div>` : ""}
+      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap">
+        ${full.length > 400 ? `<button class="btn small secondary" onclick="toggleNoteExpand('${n.id}')">${expanded ? "Thu gọn" : "Xem thêm"}</button>` : ""}
+        <button class="btn small secondary" onclick="openNoteForm('${n.id}')">Sửa</button>
+        <button class="btn small danger" onclick="deleteNote('${n.id}')">Xóa</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+function refreshNotesList() { const el = document.getElementById("notesList"); if (el) el.innerHTML = notesListHTML(); }
+function toggleNoteExpand(id) { if (noteExpanded.has(id)) noteExpanded.delete(id); else noteExpanded.add(id); refreshNotesList(); }
+function renderNotesForm() {
+  const wrap = document.getElementById("noteFormWrap"); if (!wrap) return;
+  if (!noteFormOpen) { wrap.innerHTML = ""; return; }
+  const rec = noteEditingId ? cache.notes.find(n => n.id === noteEditingId) : null;
+  wrap.innerHTML = `<div style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px">
+    <div class="field"><label>Tiêu đề (có thể bỏ trống)</label><input id="noteTitle" type="text" placeholder="VD: Việc cần nhớ tuần này" value="${esc(rec ? rec.title || "" : "")}"></div>
+    <div class="field"><label>Nội dung</label><textarea id="noteContent" rows="8" placeholder="Viết ghi chú ở đây...">${esc(rec ? rec.content || "" : "")}</textarea></div>
+    <div style="display:flex; gap:8px">
+      <button class="btn" onclick="saveNote()">💾 Lưu ghi chú</button>
+      <button class="btn secondary" onclick="closeNoteForm()">Hủy</button>
+    </div>
+  </div>`;
+}
+function openNoteForm(id) {
+  noteEditingId = id || null;
+  noteFormOpen = true;
+  renderNotesForm();
+  const t = document.getElementById("noteTitle"); if (t) t.focus();
+}
+function closeNoteForm() { noteFormOpen = false; noteEditingId = null; renderNotesForm(); }
+async function saveNote() {
+  const titleEl = document.getElementById("noteTitle");
+  const contentEl = document.getElementById("noteContent");
+  if (!titleEl || !contentEl) return;
+  const title = titleEl.value.trim();
+  const content = contentEl.value.trim();
+  if (!title && !content) { alert("Hãy nhập tiêu đề hoặc nội dung cho ghi chú."); return; }
+  const old = noteEditingId ? cache.notes.find(n => n.id === noteEditingId) : null;
+  const rec = old ? { ...old } : {};
+  rec.title = title; rec.content = content;
+  await FarmDB.put("notes", rec);
+  noteFormOpen = false; noteEditingId = null;
+  render();
+}
+async function deleteNote(id) {
+  const n = cache.notes.find(x => x.id === id);
+  if (!confirm("Xóa ghi chú \"" + noteTitle(n || {}) + "\"?")) return;
+  if (noteEditingId === id) { noteFormOpen = false; noteEditingId = null; }
+  noteExpanded.delete(id);
+  await FarmDB.remove("notes", id);
+  render();
+}
+function renderNotes() {
+  $app.innerHTML = `
+  <div class="card">
+    <h2>📝 Ghi chú</h2>
+    <p class="note">Sổ tay ghi nhanh của vườn: việc cần nhớ, số điện thoại đại lý, kinh nghiệm xử lý cây... Ghi chú tự đồng bộ giữa điện thoại và máy tính như mọi dữ liệu khác.</p>
+    <div class="field"><input id="noteSearch" type="text" placeholder="Tìm trong ghi chú..." value="${esc(noteQuery)}" oninput="noteQuery = this.value; refreshNotesList()"></div>
+    <button class="btn" onclick="openNoteForm()">+ Thêm ghi chú</button>
+    <div id="noteFormWrap"></div>
+  </div>
+  <div id="notesList">${notesListHTML()}</div>`;
+  renderNotesForm();
 }
 
 function renderData() {
@@ -2349,7 +2449,8 @@ const REMOTE_COLS = {
   special_trees: ["zone_id", "planting_id", "crop_name", "row_no", "col_no", "position_note", "issue", "status", "start_date", "notes"],
   photos: ["link_type", "link_id", "date", "tag", "note", "image", "image_path"],
   seasons: ["name", "notes"],
-  tasks: ["title", "notes"]
+  tasks: ["title", "notes"],
+  notes: ["title", "content"]
 };
 const REMOTE_RENAME = { stock_ins: { price: "unit_price", notes: "note" } };
 function toRemote(store, rec) {

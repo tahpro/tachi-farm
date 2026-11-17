@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TACHI FARM v2.28 - Quản Lý Nông Trại</title>
+<title>TACHI FARM v2.29 - Quản Lý Nông Trại</title>
 <style>
   :root{
     --green:#1f7a3d; --green-dark:#145c2b; --green-light:#e8f5ec;
@@ -91,7 +91,7 @@
 <body>
 <header>
   <span class="brand"><button id="menuBtn" onclick="toggleNav()" aria-label="Mở menu điều hướng">☰</button><h1>🌱 TACHI FARM</h1></span>
-  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.28 (17/11/2026)</span></span>
+  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.29 (17/11/2026)</span></span>
 </header>
 <div id="weatherBar" style="display:none;background:#dff0e4;border-bottom:1px solid var(--border);padding:8px 14px;font-size:13.5px;color:var(--green-dark)"></div>
 <div class="layout">
@@ -306,7 +306,7 @@ const MODULES = {
 /* ===== Giao diện & điều hướng ===== */
 const cache = { zones: [], crops: [], plantings: [], seasons: [], tasks: [], inventory: [], finances: [], care_logs: [], periods: [], stock_ins: [], photos: [], special_trees: [], harvests: [], stock_checks: [], workers: [], work_logs: [], worker_payments: [], notes: [] };
 let currentView = "dashboard";
-const APP_VERSION = "v2.28 (17/11/2026)";
+const APP_VERSION = "v2.29 (17/11/2026)";
 let editing = null; // {store, id}
 
 const VIEWS = [
@@ -2875,26 +2875,45 @@ async function askSimilarAI() {
   if (!box || !similarSource) return;
   box.innerHTML = '<p class="note">Đang hỏi AI, chờ vài giây...</p>';
   try {
-    const list = await askGeminiSimilar(similarSource);
-    if (!list.length) { box.innerHTML = '<p class="note">AI chưa tìm được sản phẩm tương tự đáng tin cậy cho thành phần này.</p>'; return; }
-    box.innerHTML = '<p class="note" style="color:var(--danger)">⚠️ Gợi ý tham khảo từ AI, có thể chưa chính xác - hãy kiểm chứng thành phần trên nhãn thật hoặc hỏi nhà bán trước khi mua.</p>' + list.map(s => `<div style="border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px"><b>${esc(s.name || "")}</b>${s.maker ? ' <span class="note">(' + esc(s.maker) + ')</span>' : ""}${s.composition ? `<br><span class="note">Thành phần: ${esc(s.composition)}</span>` : ""}${s.difference ? `<br><span class="note">Khác biệt so với sản phẩm gốc: ${esc(s.difference)}</span>` : ""}</div>`).join("");
+    const r = await askGeminiSimilar(similarSource);
+    const sug = r.suggestions || [], eq = r.equivalents || [], kw = r.search_keywords || [];
+    if (!sug.length && !eq.length && !kw.length) { box.innerHTML = '<p class="note">AI chưa tìm được gợi ý phù hợp cho thành phần này. Bạn thử lại sau ít phút nhé.</p>'; return; }
+    let h = '<p class="note" style="color:var(--danger)">⚠️ Gợi ý tham khảo từ AI, có thể chưa chính xác - hãy kiểm chứng thành phần trên nhãn thật hoặc hỏi nhà bán trước khi mua.</p>';
+    if (sug.length) {
+      h += '<h4 style="margin:12px 0 4px">Sản phẩm cụ thể AI biết</h4>' + sug.map(s => `<div style="border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px"><b>${esc(s.name || "")}</b>${s.maker ? ' <span class="note">(' + esc(s.maker) + ')</span>' : ""}${s.composition ? `<br><span class="note">Thành phần: ${esc(s.composition)}</span>` : ""}${s.difference ? `<br><span class="note">Khác biệt so với sản phẩm gốc: ${esc(s.difference)}</span>` : ""}</div>`).join("");
+    }
+    if (eq.length) {
+      h += '<h4 style="margin:12px 0 4px">Công thức tương đương để tìm mua</h4>' + eq.map(s => `<div style="border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px"><b>${esc(s.title || "")}</b>${s.composition ? `<br><span class="note">Thành phần nên có: ${esc(s.composition)}</span>` : ""}${s.note ? `<br><span class="note">${esc(s.note)}</span>` : ""}</div>`).join("");
+    }
+    if (kw.length) h += '<p style="margin-top:10px">🔎 Từ khóa tìm mua: ' + kw.map(k => `<span class="tag" style="background:var(--green-light); padding:3px 8px">${esc(k)}</span>`).join(" ") + '</p>';
+    if (r.buying_tips) h += '<p class="note" style="margin-top:6px">💡 ' + esc(r.buying_tips) + '</p>';
+    box.innerHTML = h;
   } catch (e) { box.innerHTML = '<p class="note" style="color:var(--danger)">Không hỏi được AI: ' + esc((e && e.message) || String(e)) + '</p>'; }
 }
 async function askGeminiSimilar(src) {
-  const key = geminiKey();
-  if (!key) throw new Error("Chưa nhập khóa Gemini trên máy này. Hãy vào mục Dữ liệu, thẻ \"Đọc nhãn thuốc bằng AI\" để dán khóa trước.");
   const prompt = `Bạn là chuyên gia vật tư nông nghiệp Việt Nam. Sản phẩm gốc:
 - Tên: ${src.name || ""}
 - Nhóm: ${src.category || ""}
 - Thành phần: ${src.ingredients || ""}
 - Công dụng / ghi chú: ${src.notes || ""}
-Hãy gợi ý tối đa 5 sản phẩm THẬT, đang được bán phổ biến tại Việt Nam, có thành phần hoặc hoạt chất tương tự sản phẩm gốc (với phân bón: tỷ lệ N - P2O5 - K2O và các vi lượng gần giống; với thuốc bảo vệ thực vật: cùng hoạt chất và nồng độ gần bằng). Chỉ đưa sản phẩm bạn chắc chắn có thật; không chắc thì bỏ qua, thà ít còn hơn bịa. Không nêu giá tiền. Chỉ trả về DUY NHẤT một đối tượng JSON (không thêm chữ nào khác) theo mẫu:
-{"suggestions":[{"name":"tên sản phẩm","maker":"hãng hoặc nhà sản xuất nếu biết, không biết thì để trống","composition":"thành phần chính kèm hàm lượng","difference":"điểm khác biệt chính so với sản phẩm gốc, 1 câu ngắn"}]}`;
+Nhiệm vụ: giúp nông dân tìm sản phẩm thay thế hoặc tương đương đang bán tại Việt Nam. Chỉ trả về DUY NHẤT một đối tượng JSON (không thêm chữ nào khác) theo mẫu:
+{"suggestions":[{"name":"tên sản phẩm","maker":"hãng hoặc nhà sản xuất nếu biết, không biết thì để trống","composition":"thành phần chính kèm hàm lượng","difference":"điểm khác biệt chính so với sản phẩm gốc, 1 câu ngắn"}], "equivalents":[{"title":"tên gọi dạng công thức hoặc loại sản phẩm","composition":"thành phần nên có kèm hàm lượng","note":"khi nào dùng dạng này, 1 câu ngắn"}], "search_keywords":["từ khóa tìm mua"], "buying_tips":"lưu ý khi chọn hàng thay thế"}
+Quy tắc:
+- suggestions: tối đa 5 sản phẩm cụ thể có tên thương mại mà bạn biết rõ là có thật trên thị trường Việt Nam và có thành phần/hoạt chất tương tự sản phẩm gốc. Không chắc chắn về một sản phẩm thì bỏ qua, KHÔNG bịa tên sản phẩm; mảng này được phép rỗng.
+- equivalents: BẮT BUỘC có ít nhất 2 mục - các CÔNG THỨC tương đương về chức năng (không cần tên thương mại), suy ra từ chính thành phần sản phẩm gốc. Ví dụ với phân bón: nêu các tỷ lệ N - P2O5 - K2O tương đương cho cùng công dụng, kèm vi lượng và chất điều hòa sinh trưởng cần có; với thuốc bảo vệ thực vật: nêu hoạt chất cùng nhóm tác động có thể thay thế và nồng độ tương đương.
+- search_keywords: 3-5 từ khóa ngắn, thực tế, để nông dân gõ tìm mua trên Shopee hoặc hỏi cửa hàng vật tư (gồm cả từ khóa theo công thức, ví dụ "phân bón lá 10-33-20").
+- buying_tips: 1-2 câu lưu ý khi chọn hàng thay thế: cần so hàm lượng gì, tránh nhầm lẫn gì.
+- Không nêu giá tiền.`;
   const text = await geminiCall([{ text: prompt }], 0.2);
   let obj;
   try { obj = JSON.parse(text); } catch (e) { throw new Error("AI trả về định dạng lạ, hãy bấm thử lại."); }
-  const arr = Array.isArray(obj.suggestions) ? obj.suggestions : [];
-  return arr.filter(s => s && s.name).slice(0, 5);
+  const clean = (arr, fields) => (Array.isArray(arr) ? arr : []).filter(x => x && typeof x === "object" && fields.some(f => x[f])).slice(0, 5);
+  return {
+    suggestions: clean(obj.suggestions, ["name"]),
+    equivalents: clean(obj.equivalents, ["title", "composition"]),
+    search_keywords: (Array.isArray(obj.search_keywords) ? obj.search_keywords : []).filter(x => typeof x === "string" && x.trim()).slice(0, 5),
+    buying_tips: typeof obj.buying_tips === "string" ? obj.buying_tips : ""
+  };
 }
 
 /* ===== Thời tiết ở dải ngang (Open-Meteo, miễn phí, không cần khóa) ===== */

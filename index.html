@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TACHI FARM v2.27 - Quản Lý Nông Trại</title>
+<title>TACHI FARM v2.28 - Quản Lý Nông Trại</title>
 <style>
   :root{
     --green:#1f7a3d; --green-dark:#145c2b; --green-light:#e8f5ec;
@@ -91,7 +91,7 @@
 <body>
 <header>
   <span class="brand"><button id="menuBtn" onclick="toggleNav()" aria-label="Mở menu điều hướng">☰</button><h1>🌱 TACHI FARM</h1></span>
-  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.27 (17/11/2026)</span></span>
+  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.28 (17/11/2026)</span></span>
 </header>
 <div id="weatherBar" style="display:none;background:#dff0e4;border-bottom:1px solid var(--border);padding:8px 14px;font-size:13.5px;color:var(--green-dark)"></div>
 <div class="layout">
@@ -306,7 +306,7 @@ const MODULES = {
 /* ===== Giao diện & điều hướng ===== */
 const cache = { zones: [], crops: [], plantings: [], seasons: [], tasks: [], inventory: [], finances: [], care_logs: [], periods: [], stock_ins: [], photos: [], special_trees: [], harvests: [], stock_checks: [], workers: [], work_logs: [], worker_payments: [], notes: [] };
 let currentView = "dashboard";
-const APP_VERSION = "v2.27 (17/11/2026)";
+const APP_VERSION = "v2.28 (17/11/2026)";
 let editing = null; // {store, id}
 
 const VIEWS = [
@@ -2648,7 +2648,7 @@ async function cloudRegister() {
 function cloudLogout() { Cloud.signOut(); render(); }
 
 /* ===== Đọc nhãn thuốc / phân bón bằng AI Gemini (v2.25) ===== */
-const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
+const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
 let pendingLabelPhotos = [];
 function geminiKey() { return (localStorage.getItem("tachi_ai_key") || "").trim(); }
 function aiCardHTML() {
@@ -2678,9 +2678,46 @@ Quy tắc:
 - unit: đơn vị đựng của sản phẩm, ví dụ "chai", "gói", "bao", "lít", "kg". Không rõ thì "".
 - notes: tóm tắt công dụng chính và liều lượng/cách pha nếu nhãn có ghi, tối đa khoảng 300 ký tự, tiếng Việt. Không có thì "".
 - Tuyệt đối không bịa thông tin không có trên nhãn; trường nào không đọc được thì để trống hoặc null như quy tắc trên.`;
-async function readLabelWithGemini(dataUrls) {
+const aiSleep = ms => new Promise(r => setTimeout(r, ms));
+/* Gọi Gemini dùng chung cho mọi tính năng AI: thử lần lượt các model,
+   gặp 429/503 thì chờ 4 giây thử lại đúng model đó 1 lần rồi mới qua
+   model kế (Google hay quá tải chớp nhoáng kiểu 503 high demand). */
+async function geminiCall(parts, temperature) {
   const key = geminiKey();
   if (!key) throw new Error("Chưa nhập khóa Gemini trên máy này. Hãy vào mục Dữ liệu, thẻ \"Đọc nhãn thuốc bằng AI\" để dán khóa trước.");
+  let lastErr = "", sawBusy = false;
+  for (const model of GEMINI_MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let res;
+      try {
+        res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+          body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: "application/json", temperature: temperature } })
+        });
+      } catch (e) { lastErr = "Không gọi được Gemini, hãy kiểm tra mạng."; break; }
+      if (!res.ok) {
+        const t = res.text ? await res.text().catch(() => "") : "";
+        if (t.includes("API_KEY_INVALID")) throw new Error("Khóa Gemini không đúng. Hãy kiểm tra lại khóa ở mục Dữ liệu.");
+        if (res.status === 403) throw new Error("Khóa Gemini bị từ chối quyền (403). Hãy kiểm tra lại khóa ở mục Dữ liệu.");
+        if (res.status === 429 || res.status === 503) {
+          sawBusy = true;
+          lastErr = "Model " + model + " đang bận hoặc đã hết lượt miễn phí hôm nay (" + res.status + ").";
+          if (attempt === 0) { await aiSleep(4000); continue; }
+          break;
+        }
+        lastErr = "Model " + model + " báo lỗi " + res.status + ".";
+        break;
+      }
+      const j = await res.json();
+      const cand = (j.candidates || [])[0] || {};
+      return ((cand.content || {}).parts || []).map(p => p.text || "").join("").trim();
+    }
+  }
+  if (sawBusy) throw new Error("Tất cả các model AI đều đang bận hoặc hết lượt miễn phí tạm thời (Google quá tải). Bạn chờ 1-2 phút rồi bấm thử lại nhé.");
+  throw new Error(lastErr || "Không gọi được AI lúc này. Hãy thử lại sau.");
+}
+async function readLabelWithGemini(dataUrls) {
   const list = (Array.isArray(dataUrls) ? dataUrls : [dataUrls]).filter(Boolean);
   const parts = [{ text: LABEL_PROMPT }];
   for (const u of list) {
@@ -2688,33 +2725,9 @@ async function readLabelWithGemini(dataUrls) {
     if (base64) parts.push({ inline_data: { mime_type: "image/jpeg", data: base64 } });
   }
   if (parts.length < 2) throw new Error("Ảnh không hợp lệ.");
-  let lastErr = "";
-  for (const model of GEMINI_MODELS) {
-    let res;
-    try {
-      res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
-        })
-      });
-    } catch (e) { lastErr = "Không gọi được Gemini, hãy kiểm tra mạng."; continue; }
-    if (res.status === 429 || res.status === 503 || res.status === 404) { lastErr = "Model " + model + " đang bận hoặc đã hết lượt miễn phí hôm nay (" + res.status + ")."; continue; }
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      if (t.includes("API_KEY_INVALID")) throw new Error("Khóa Gemini không đúng. Hãy kiểm tra lại khóa ở mục Dữ liệu.");
-      if (res.status === 403) throw new Error("Khóa Gemini bị từ chối quyền (403). Hãy kiểm tra lại khóa ở mục Dữ liệu.");
-      throw new Error("Gemini báo lỗi " + res.status + ". " + t.slice(0, 150));
-    }
-    const j = await res.json();
-    const cand = (j.candidates || [])[0] || {};
-    const text = ((cand.content || {}).parts || []).map(p => p.text || "").join("").trim();
-    try { return JSON.parse(text); }
-    catch { throw new Error("AI trả về nội dung không đọc được. Hãy chụp lại ảnh rõ hơn rồi thử lại."); }
-  }
-  throw new Error("Không đọc được nhãn lúc này. " + lastErr + " Hãy thử lại sau.");
+  const text = await geminiCall(parts, 0.1);
+  try { return JSON.parse(text); }
+  catch { throw new Error("AI trả về nội dung không đọc được. Hãy chụp lại ảnh rõ hơn rồi thử lại."); }
 }
 function setFormVal(name, val) {
   if (val === "" || val === null || val === undefined) return;
@@ -2877,32 +2890,11 @@ async function askGeminiSimilar(src) {
 - Công dụng / ghi chú: ${src.notes || ""}
 Hãy gợi ý tối đa 5 sản phẩm THẬT, đang được bán phổ biến tại Việt Nam, có thành phần hoặc hoạt chất tương tự sản phẩm gốc (với phân bón: tỷ lệ N - P2O5 - K2O và các vi lượng gần giống; với thuốc bảo vệ thực vật: cùng hoạt chất và nồng độ gần bằng). Chỉ đưa sản phẩm bạn chắc chắn có thật; không chắc thì bỏ qua, thà ít còn hơn bịa. Không nêu giá tiền. Chỉ trả về DUY NHẤT một đối tượng JSON (không thêm chữ nào khác) theo mẫu:
 {"suggestions":[{"name":"tên sản phẩm","maker":"hãng hoặc nhà sản xuất nếu biết, không biết thì để trống","composition":"thành phần chính kèm hàm lượng","difference":"điểm khác biệt chính so với sản phẩm gốc, 1 câu ngắn"}]}`;
-  let lastErr = "";
-  for (const model of GEMINI_MODELS) {
-    let res;
-    try {
-      res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } })
-      });
-    } catch (e) { lastErr = "Không gọi được Gemini, hãy kiểm tra mạng."; continue; }
-    if (!res.ok) {
-      let msg = ""; try { const j = await res.json(); msg = (j.error && j.error.message) || ""; if (j.error && j.error.status === "API_KEY_INVALID") throw new Error("Khóa Gemini không đúng. Hãy kiểm tra lại khóa ở mục Dữ liệu."); } catch (e) { if (e.message && e.message.includes("Khóa Gemini")) throw e; }
-      if (res.status === 403) throw new Error("Gemini từ chối khóa này (403). Hãy kiểm tra lại khóa ở mục Dữ liệu.");
-      lastErr = "Model " + model + " đang bận hoặc hết lượt miễn phí (" + res.status + "). " + msg;
-      continue;
-    }
-    const data = await res.json();
-    const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
-    const text = parts.map(p => p.text || "").join("");
-    try {
-      const obj = JSON.parse(text);
-      const arr = Array.isArray(obj.suggestions) ? obj.suggestions : [];
-      return arr.filter(s => s && s.name).slice(0, 5);
-    } catch (e) { lastErr = "AI trả về định dạng lạ, hãy thử lại."; continue; }
-  }
-  throw new Error(lastErr || "Không hỏi được AI lúc này, hãy thử lại sau.");
+  const text = await geminiCall([{ text: prompt }], 0.2);
+  let obj;
+  try { obj = JSON.parse(text); } catch (e) { throw new Error("AI trả về định dạng lạ, hãy bấm thử lại."); }
+  const arr = Array.isArray(obj.suggestions) ? obj.suggestions : [];
+  return arr.filter(s => s && s.name).slice(0, 5);
 }
 
 /* ===== Thời tiết ở dải ngang (Open-Meteo, miễn phí, không cần khóa) ===== */

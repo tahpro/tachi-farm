@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TACHI FARM v2.31 - Quản Lý Nông Trại</title>
+<title>TACHI FARM v2.32 - Quản Lý Nông Trại</title>
 <style>
   :root{
     --green:#1f7a3d; --green-dark:#145c2b; --green-light:#e8f5ec;
@@ -91,7 +91,7 @@
 <body>
 <header>
   <span class="brand"><button id="menuBtn" onclick="toggleNav()" aria-label="Mở menu điều hướng">☰</button><h1>🌱 TACHI FARM</h1></span>
-  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.31 (19/11/2026)</span></span>
+  <span><span class="badge" id="syncStatus">☁ Chưa kết nối online</span> <span class="badge" id="appBadge">v2.32 (19/11/2026)</span></span>
 </header>
 <div id="weatherBar" style="display:none;background:#dff0e4;border-bottom:1px solid var(--border);padding:8px 14px;font-size:13.5px;color:var(--green-dark)"></div>
 <div class="layout">
@@ -306,7 +306,7 @@ const MODULES = {
 /* ===== Giao diện & điều hướng ===== */
 const cache = { zones: [], crops: [], plantings: [], seasons: [], tasks: [], inventory: [], finances: [], care_logs: [], periods: [], stock_ins: [], photos: [], special_trees: [], harvests: [], stock_checks: [], workers: [], work_logs: [], worker_payments: [], notes: [] };
 let currentView = "dashboard";
-const APP_VERSION = "v2.31 (19/11/2026)";
+const APP_VERSION = "v2.32 (19/11/2026)";
 let editing = null; // {store, id}
 
 const VIEWS = [
@@ -403,6 +403,7 @@ function renderDashboard() {
       <div class="stat"><div class="num" style="font-size:20px">${fmtMoney(chi)}</div><div class="label">Chi tháng này</div></div>
       <div class="stat"><div class="num" style="font-size:20px">${fmtMoney(thu - chi)}</div><div class="label">Chênh lệch tháng này</div></div>
     </div>
+    ${aiChatCardHTML()}
     <div class="card"><h2>📌 Việc hôm nay (${todayTasks.length})</h2><div class="table-wrap"><table>${taskList(todayTasks)}</table></div></div>
     <div class="card"><h2>⏰ Việc quá hạn (${overdue.length})</h2><div class="table-wrap"><table>${taskList(overdue)}</table></div></div>
     ${lowStock.length ? `<div class="card"><h2>⚠️ Vật tư sắp hết</h2><p class="note">${lowStock.map(i => esc(i.name) + " (còn " + esc(i.quantity) + " " + esc(i.unit || "") + ")").join(" · ")}</p></div>` : ""}
@@ -995,6 +996,84 @@ function renderInventory() {
     ${checkHist}`;
   if (inventoryQuery || inventoryCat) applyInventoryFilters();
 }
+/* ===== Hỏi đáp thuốc và bệnh cây (chat AI hoặc tìm trên trình duyệt) ===== */
+let aiChatMsgs = null, chatBusy = false, chatLastQ = "";
+function chatMsgsLoad() { if (aiChatMsgs) return aiChatMsgs; try { aiChatMsgs = JSON.parse(localStorage.getItem("tachi_ai_chat") || "[]"); } catch { aiChatMsgs = []; } if (!Array.isArray(aiChatMsgs)) aiChatMsgs = []; return aiChatMsgs; }
+function chatMsgsSave() { try { localStorage.setItem("tachi_ai_chat", JSON.stringify(chatMsgsLoad().slice(-40))); } catch {} }
+function chatMsgsHTML() {
+  const msgs = chatMsgsLoad();
+  if (!msgs.length) return `<p class="note">Chưa có câu hỏi nào. Ví dụ: "Thuốc chứa hoạt chất Abamectin trị được gì?", "Hồ tiêu bị vàng lá, rụng đốt thì xử lý sao?", "Phân NPK 20-20-15 dùng cho giai đoạn nào của cà phê?"</p>`;
+  return msgs.map(m => m.role === "user"
+    ? `<div style="text-align:right;margin:6px 0"><span style="display:inline-block;background:#dff0e4;border:1px solid var(--border);border-radius:10px;padding:7px 10px;max-width:88%;text-align:left">${esc(m.text).replace(/\n/g, "<br>")}</span></div>`
+    : `<div style="margin:6px 0"><span style="display:inline-block;background:#f4f8f4;border:1px solid var(--border);border-radius:10px;padding:7px 10px;max-width:92%">${esc(m.text).replace(/\n/g, "<br>")}</span></div>`).join("");
+}
+function aiChatCardHTML() {
+  return `<div class="card"><h2>💬 Hỏi đáp thuốc & bệnh cây</h2>
+    <p class="note">Hỏi về thành phần, hoạt chất của thuốc/phân, hoặc cách xử lý bệnh và sâu hại cho hồ tiêu, cà phê, vải thiều, sầu riêng, hoa màu. Có 2 cách: <b>Hỏi AI</b> (dùng khóa Gemini/Groq, tốn lượt miễn phí) hoặc <b>Tìm trên trình duyệt</b> (mở Google bằng chính câu hỏi của bạn, không tốn lượt AI - hợp khi AI đang quá tải).</p>
+    <div id="chatMsgs" style="max-height:340px;overflow-y:auto;margin:10px 0">${chatMsgsHTML()}</div>
+    <div id="chatStatus"></div>
+    <div class="field"><label>Câu hỏi của bạn</label><textarea id="chatInput" rows="2" placeholder="Gõ câu hỏi rồi chọn Hỏi AI hoặc Tìm trên trình duyệt..."></textarea></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="sendAiChat()">🤖 Hỏi AI</button>
+      <button class="btn secondary" onclick="sendWebSearch()">🌐 Tìm trên trình duyệt</button>
+      ${chatMsgsLoad().length ? `<button class="btn secondary" onclick="clearAiChat()">🗑️ Xóa đoạn chat</button>` : ""}
+    </div>
+    <p class="note" style="margin-top:8px">Câu trả lời của AI chỉ để tham khảo: trước khi phun/bón thật, hãy kiểm chứng trên nhãn sản phẩm và hướng dẫn chính thức. Đoạn chat lưu trên từng máy, không đồng bộ.</p></div>`;
+}
+function chatRefreshNodes() {
+  const box = document.getElementById("chatMsgs");
+  if (box) { box.innerHTML = chatMsgsHTML(); box.scrollTop = box.scrollHeight; }
+}
+function chatSetStatus(t) { const s = document.getElementById("chatStatus"); if (s) s.innerHTML = t ? `<p class="note">${esc(t)}</p>` : ""; }
+function chatInventoryContext() {
+  const items = (cache.inventory || []).filter(i => !i.retired).slice(0, 30);
+  if (!items.length) return "(Kho vật tư đang trống.)";
+  return items.map(i => "- " + (i.name || "") + (i.category ? " (" + i.category + ")" : "") + (i.ingredients ? ": " + i.ingredients : "")).join("\n");
+}
+async function sendAiChat() {
+  const inp = document.getElementById("chatInput");
+  const q = inp ? inp.value.trim() : "";
+  if (!q) { alert("Hãy gõ câu hỏi trước đã."); return; }
+  if (chatBusy) return;
+  chatLastQ = q;
+  chatMsgsLoad().push({ role: "user", text: q });
+  chatMsgsSave(); chatRefreshNodes();
+  if (inp) inp.value = "";
+  chatBusy = true; chatSetStatus("AI đang trả lời, bạn chờ một chút...");
+  const hist = chatMsgsLoad().slice(-7, -1).map(m => (m.role === "user" ? "Người dùng: " : "AI: ") + m.text).join("\n");
+  const prompt = `Bạn là trợ lý nông nghiệp am hiểu thuốc bảo vệ thực vật, phân bón và bệnh cây ở Việt Nam. Hãy trả lời câu hỏi của một chủ vườn trồng hồ tiêu, cà phê, vải thiều, sầu riêng và hoa màu.
+
+Quy tắc trả lời:
+- Trả lời bằng tiếng Việt, rõ ràng, thực tế, có cấu trúc (gạch đầu dòng khi liệt kê).
+- Về thuốc/phân: nêu hoạt chất, công dụng, đối tượng phòng trị, liều lượng tham khảo nếu biết chắc, thời gian cách ly và lưu ý an toàn.
+- Về bệnh cây: nêu nguyên nhân khả thi, dấu hiệu nhận biết và hướng xử lý (biện pháp canh tác trước, thuốc sau).
+- Không bịa tên thương mại hay hoạt chất khi không chắc; không chắc thì nói rõ là không chắc và khuyên kiểm chứng trên nhãn sản phẩm hoặc cán bộ BVTV địa phương.
+- Chỉ trả về đúng một JSON dạng {"answer": "nội dung trả lời"} - trong answer được dùng ký tự xuống dòng.
+
+Vật tư người dùng đang có trong kho (hãy ưu tiên gợi ý dùng những thứ có sẵn này khi phù hợp):
+${chatInventoryContext()}
+${hist ? "\nĐoạn chat trước đó:\n" + hist + "\n" : ""}
+Câu hỏi mới: ${q}`;
+  try {
+    const text = await aiCall([{ text: prompt }], 0.3);
+    let answer = "";
+    try { const obj = parseAiJson(text); answer = obj && obj.answer ? String(obj.answer) : ""; } catch {}
+    if (!answer) answer = String(text || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+    if (!answer) answer = "AI trả về nội dung rỗng. Bạn thử hỏi lại hoặc dùng nút Tìm trên trình duyệt.";
+    chatMsgsLoad().push({ role: "ai", text: answer });
+  } catch (e) {
+    chatMsgsLoad().push({ role: "ai", text: "⚠️ " + (e.message || "Không gọi được AI.") + "\nBạn có thể bấm nút 🌐 Tìm trên trình duyệt ở dưới để tra cứu bằng chính câu hỏi này, không tốn lượt AI." });
+  }
+  chatBusy = false; chatSetStatus(""); chatMsgsSave(); chatRefreshNodes();
+}
+function sendWebSearch() {
+  const inp = document.getElementById("chatInput");
+  const q = (inp && inp.value.trim()) || chatLastQ;
+  if (!q) { alert("Hãy gõ câu hỏi trước đã."); return; }
+  window.open("https://www.google.com/search?q=" + encodeURIComponent(q), "_blank");
+}
+function clearAiChat() { aiChatMsgs = []; chatMsgsSave(); if (currentView === "dashboard") render(); else chatRefreshNodes(); }
+
 function openStockIn(itemId) {
   const item = cache.inventory.find(i => i.id === itemId); if (!item) return;
   editing = { store: "stock_ins", id: null, item_id: itemId };
@@ -3008,7 +3087,7 @@ function setWeatherLoc(id) {
   localStorage.setItem("tachi_weather_sel", id);
   localStorage.setItem("tachi_weather_loc", JSON.stringify({ name: sel.name, lat: sel.lat, lon: sel.lon }));
   localStorage.removeItem("tachi_weather_cache"); localStorage.removeItem("tachi_weather_full");
-  wxLastData = null;
+  wxLastData = null; wxPickDate = ""; wxOpenDay = -1;
   renderWeatherBar();
   if (currentView === "weather") renderWeather(); else if (currentView === "data") render();
 }
@@ -3095,13 +3174,13 @@ function geoWeatherLoc() {
 function clearWeatherLoc() { const cur = weatherLoc(); if (cur && cur.id) removeWeatherLoc(cur.id); else { localStorage.removeItem("tachi_weather_loc"); renderWeatherBar(); render(); } }
 
 /* ===== Tab Thời tiết chi tiết (Open-Meteo, dự báo 10 ngày + theo giờ, nhiều vị trí) ===== */
-let wxLastData = null, wxOpenDay = -1, wxAddOpen = false, wxSearchResults = [];
+let wxLastData = null, wxOpenDay = -1, wxAddOpen = false, wxSearchResults = [], wxPickDate = "";
 function fmtHour(t) { return String(t || "").slice(11, 16); }
 function fmtDayLabel(iso) { const d = new Date(iso + "T00:00:00"); return ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"][d.getDay()] + " " + fmtDate(iso); }
 async function fetchWeatherFull(loc, force) {
   const key = loc.lat + "," + loc.lon;
   if (!force) { try { const c = JSON.parse(localStorage.getItem("tachi_weather_full") || "null"); if (c && c.key === key && Date.now() - c.ts < 30 * 60 * 1000) return c.data; } catch {} }
-  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,weather_code,precipitation_probability,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset&timezone=auto&forecast_days=10";
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,weather_code,precipitation_probability,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset&timezone=auto&forecast_days=16";
   const res = await fetch(url); if (!res.ok) throw new Error("wx " + res.status);
   const data = await res.json();
   try { localStorage.setItem("tachi_weather_full", JSON.stringify({ ts: Date.now(), key, data })); } catch {}
@@ -3126,8 +3205,11 @@ function renderWeather() {
     <div class="card"><h2>Vị trí đang xem</h2><div>${chips || "<span class='note'>Chưa có vị trí nào.</span>"}</div>
     <button class="btn secondary" onclick="toggleWxAdd()">${wxAddOpen ? "Đóng phần thêm" : "➕ Thêm vị trí"}</button>
     ${loc ? `<button class="btn secondary" onclick="refreshWeather()">🔄 Làm mới dự báo</button>` : ""}
-    <p class="note" style="margin-top:8px">Vị trí đang chọn cũng là vị trí hiện trên dải thời tiết phía trên app. Nguồn: Open-Meteo (miễn phí, cần có mạng), dự báo 10 ngày, bấm vào từng ngày để xem chi tiết theo giờ. Các vị trí lưu trên từng máy, không đồng bộ.</p></div>
+    <p class="note" style="margin-top:8px">Vị trí đang chọn cũng là vị trí hiện trên dải thời tiết phía trên app. Nguồn: Open-Meteo (miễn phí, cần có mạng), dự báo 16 ngày tới, bấm vào từng ngày để xem chi tiết theo giờ. Các vị trí lưu trên từng máy, không đồng bộ.</p>
+    ${loc ? `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:end"><div class="field" style="margin:0"><label>📅 Xem một ngày cụ thể</label><input type="date" id="wxDatePick" value="${esc(wxPickDate)}"></div><button class="btn" onclick="pickWeatherDate()">Xem ngày này</button></div>
+    <p class="note" style="margin-top:6px">Chọn ngày trong 16 ngày tới để xem dự báo của riêng ngày đó; chọn một ngày đã qua để xem thời tiết thực tế đã ghi nhận được (nhiệt độ, mưa theo giờ) - tiện đối chiếu với nhật ký phun thuốc, bỏ phân.</p>` : ""}</div>
     ${addPanel}
+    <div id="wxArchive"></div>
     <div id="wxBody">${loc ? "<div class='card'><p class='note'>Đang tải dự báo...</p></div>" : "<div class='card'><p>Hãy thêm vị trí đầu tiên để xem dự báo.</p></div>"}</div>`;
   if (loc) loadWeatherInto(loc, false);
 }
@@ -3137,9 +3219,54 @@ async function loadWeatherInto(loc, force) {
     const data = await fetchWeatherFull(loc, force);
     wxLastData = data;
     const b2 = document.getElementById("wxBody"); if (b2) b2.innerHTML = weatherDetailHTML(data, loc);
+    applyWxPick();
   } catch { const b3 = document.getElementById("wxBody"); if (b3) b3.innerHTML = `<div class="card"><p>Không tải được dự báo (cần có mạng). Hãy bấm Làm mới để thử lại.</p></div>`; }
 }
 function refreshWeather() { const loc = weatherLoc(); if (loc) loadWeatherInto(loc, true); }
+function wxTodayStr() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function applyWxPick() {
+  if (!wxPickDate || !wxLastData || !wxLastData.daily) return;
+  const idx = wxLastData.daily.time.indexOf(wxPickDate);
+  if (idx < 0) return;
+  wxOpenDay = idx;
+  const body = document.getElementById("wxBody"); const loc = weatherLoc();
+  if (body && loc) { body.innerHTML = weatherDetailHTML(wxLastData, loc); const el = document.getElementById("wxDay-" + wxPickDate); if (el && el.scrollIntoView) el.scrollIntoView({ block: "start" }); }
+}
+async function pickWeatherDate() {
+  const inp = document.getElementById("wxDatePick");
+  const date = inp ? inp.value : "";
+  const loc = weatherLoc();
+  if (!date || !loc) { alert("Hãy chọn một ngày trước."); return; }
+  wxPickDate = date;
+  const arch = document.getElementById("wxArchive");
+  if (date >= wxTodayStr()) {
+    if (arch) arch.innerHTML = "";
+    if (wxLastData && wxLastData.daily) {
+      const idx = wxLastData.daily.time.indexOf(date);
+      if (idx < 0) { alert("Dự báo chỉ có tới ngày " + fmtDate(wxLastData.daily.time[wxLastData.daily.time.length - 1]) + ". App sẽ mở ngày xa nhất có dự báo."); wxPickDate = wxLastData.daily.time[wxLastData.daily.time.length - 1]; }
+    }
+    applyWxPick();
+    return;
+  }
+  if (arch) arch.innerHTML = "<div class='card'><p class='note'>Đang tải thời tiết thực tế của ngày " + fmtDate(date) + "...</p></div>";
+  try {
+    const url = "https://archive-api.open-meteo.com/v1/archive?latitude=" + loc.lat + "&longitude=" + loc.lon + "&start_date=" + date + "&end_date=" + date + "&hourly=temperature_2m,weather_code,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset&timezone=auto";
+    const res = await fetch(url); if (!res.ok) throw new Error("archive " + res.status);
+    const data = await res.json();
+    if (arch) { arch.innerHTML = weatherArchiveHTML(data, loc, date); if (arch.scrollIntoView) arch.scrollIntoView({ block: "start" }); }
+  } catch { if (arch) arch.innerHTML = "<div class='card'><p>Không tải được dữ liệu ngày đã qua (cần có mạng). Hãy thử lại.</p></div>"; }
+}
+function weatherArchiveHTML(data, loc, date) {
+  const d = data.daily || {}, h = data.hourly || {};
+  const i = 0;
+  let rows = "";
+  if (h.time) h.time.forEach((ht, j) => { rows += `<tr><td>${fmtHour(ht)}</td><td>${wmoIcon(h.weather_code[j])} ${WMO_VN[h.weather_code[j]] || ""}</td><td>${Math.round(h.temperature_2m[j])}°C</td><td>${h.precipitation && h.precipitation[j] != null ? h.precipitation[j] + " mm" : "-"}</td></tr>`; });
+  return `<div class="card"><h2>📅 ${esc(loc.name)} - ${fmtDayLabel(date)}</h2>
+  <p class="note">Đây là thời tiết <b>thực tế đã ghi nhận</b> (số liệu lưu trữ của Open-Meteo), không phải dự báo.</p>
+  <p>${wmoIcon(d.weather_code[i])} ${WMO_VN[d.weather_code[i]] || ""} · 🌡️ <b>${Math.round(d.temperature_2m_min[i])}° - ${Math.round(d.temperature_2m_max[i])}°C</b> · 🌧️ Tổng mưa: <b>${d.precipitation_sum && d.precipitation_sum[i] != null ? d.precipitation_sum[i] + " mm" : "-"}</b> · 🌬️ Gió tối đa: <b>${Math.round(d.wind_speed_10m_max[i])} km/h</b>${d.sunrise ? ` · 🌅 ${fmtHour(d.sunrise[i])} - 🌇 ${fmtHour(d.sunset[i])}` : ""}</p>
+  ${rows ? `<div style="overflow-x:auto;margin-top:6px"><table><tr><th>Giờ</th><th>Trời</th><th>Nhiệt độ</th><th>Lượng mưa</th></tr>${rows}</table></div>` : ""}
+  </div>`;
+}
 function toggleWxAdd() { wxAddOpen = !wxAddOpen; if (!wxAddOpen) wxSearchResults = []; renderWeather(); }
 function toggleWxDay(i) { wxOpenDay = wxOpenDay === i ? -1 : i; const body = document.getElementById("wxBody"); const loc = weatherLoc(); if (body && wxLastData && loc) body.innerHTML = weatherDetailHTML(wxLastData, loc); }
 function weatherDetailHTML(data, loc) {
@@ -3147,9 +3274,9 @@ function weatherDetailHTML(data, loc) {
   let html = `<div class="card"><h2>${wmoIcon(cur.weather_code)} ${esc(loc.name)}: ${WMO_VN[cur.weather_code] || ""}, ${Math.round(cur.temperature_2m)}°C</h2>
   <p>🌡️ Cảm giác như: <b>${Math.round(cur.apparent_temperature)}°C</b> · 💧 Độ ẩm: <b>${cur.relative_humidity_2m}%</b> · 🌬️ Gió: <b>${Math.round(cur.wind_speed_10m)} km/h</b>${cur.wind_direction_10m != null ? " (hướng " + Math.round(cur.wind_direction_10m) + "°)" : ""} · 🎈 Áp suất: <b>${Math.round(cur.surface_pressure)} hPa</b></p>
   <p>🌅 Bình minh: <b>${fmtHour(d.sunrise[0])}</b> · 🌇 Hoàng hôn: <b>${fmtHour(d.sunset[0])}</b> · Hôm nay: <b>${Math.round(d.temperature_2m_min[0])}° - ${Math.round(d.temperature_2m_max[0])}°C</b>, khả năng mưa <b>${d.precipitation_probability_max && d.precipitation_probability_max[0] != null ? d.precipitation_probability_max[0] + "%" : "-"}</b></p></div>`;
-  html += `<div class="card"><h2>Dự báo 10 ngày</h2><p class="note">Bấm vào một ngày để xem chi tiết theo giờ của ngày đó.</p>`;
+  html += `<div class="card"><h2>Dự báo 16 ngày tới</h2><p class="note">Bấm vào một ngày để xem chi tiết theo giờ của ngày đó.</p>`;
   d.time.forEach((t, i) => {
-    html += `<div style="border-bottom:1px solid var(--border);padding:8px 0">
+    html += `<div id="wxDay-${t}" style="border-bottom:1px solid var(--border);padding:8px 0">
       <div onclick="toggleWxDay(${i})" style="cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center">
         <span style="min-width:160px"><b>${i === 0 ? "Hôm nay" : fmtDayLabel(t)}</b> <span class="note">${fmtDate(t)}</span></span>
         <span>${wmoIcon(d.weather_code[i])} ${WMO_VN[d.weather_code[i]] || ""}</span>
